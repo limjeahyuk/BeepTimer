@@ -1,0 +1,21 @@
+{
+  "images" : [
+    {
+      "filename" : "ChatGPT Image 2025년 8월 2일 오후 06_44_45.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

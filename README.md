@@ -65,6 +65,7 @@
 
 ## 🧱 기본 구조 (MVVM)
 
+```
 📁 Models/
 ├── TimerSettings.swift
 └── TimerPhase.swift
@@ -77,6 +78,8 @@
 ├── TimerView.swift
 ├── SettingsView.swift
 └── CompletionView.swift
+```
+
 ---
 
 ## 🔔 알림 예시
@@ -121,3 +124,8 @@
 - [ ] 앱스토어 릴리즈 준비
 
 ---
+
+## HISTORY
+
+###0802
+아이콘 생성 및 기본 화면 생성.
