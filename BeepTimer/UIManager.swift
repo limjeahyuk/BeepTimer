@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+struct ColorManager {
+    static let white = Color(hex: "#FFFFFF")
+    static let lightGray = Color(hex: "#CCCCCC")
+    static let mainColor = Color(hex: "#1A1E24")
+    static let timerCircle = Color(hex: "#00D26A")
+}
+
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -33,3 +40,11 @@ extension Color {
         )
     }
 }
+
+extension Font{
+    static func fromCSSFont(_ font: Int, weight: Weight) -> Font {
+        
+        return .system(size: CGFloat(font), weight: weight )
+    }
+}
+
