@@ -48,9 +48,9 @@ struct TimerInfoView: View {
     
     var formattedValue: (main: String, sub: String?) {
         if value < 60 {
-            return (String(value), "sec")
+            return (String(value), "s")
         } else if value % 60 == 0 {
-            return ("\(value / 60)", "min")
+            return ("\(value / 60)", "m")
         } else {
             return ("\(value / 60)m", "\(value % 60)s")
         }
