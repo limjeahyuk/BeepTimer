@@ -18,7 +18,7 @@ struct TimerHeaderView: View {
     let totalTime: Int
     let restTime: Int
     let totalSets: Int
-    @Binding var currentSet: Int
+    var currentSet: Int
     
     var body: some View {
         HStack {

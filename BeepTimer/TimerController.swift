@@ -8,24 +8,55 @@
 import SwiftUI
 
 class TimerController: ObservableObject {
+    // 현재 돌고 있는 시간 ( Time / Rest )
+    enum Phase: Equatable {
+        case time
+        case rest
+    }
+    
+    // 현재 상태
     enum State: Equatable {
         case idle
         case running(start: Date, end: Date)
         case paused(remainig: TimeInterval)
     }
     
+    // config를 이용하여 설정
+    @Published var timeSec: TimeInterval = 30
+    @Published var restSec: TimeInterval = 15
+    @Published var totalSets: Int = 3
+    
     // 외부에서는 읽기만 가능.
     // state는 무조건 내부에서만 변경 가능.
+    @Published private(set) var phase: Phase = .time
+    @Published private(set) var setIndex: Int = 1
     @Published private(set) var state: State = .idle
-    @Published private(set) var totalTime: TimeInterval = 30 // 초
+    
+    var onStart: (() -> Void)?
     var onEnded: (() -> Void)?
+    var onPhaseChanged: ((Phase, Int) -> Void)?
+    
+    func currentTotal() -> TimeInterval {
+        phase == .time ? timeSec : restSec
+    }
+    
+    func configure(time: Int, rest: Int, sets: Int){
+        timeSec = TimeInterval(time)
+        restSec = TimeInterval(rest)
+        totalSets = sets
+    }
 
     // 새로 시작 무조건 처음부터
-    func start(total: Int? = nil) {
-        if let total { totalTime = TimeInterval(total) }
-        let now = Date()
-        // state 변경 및 시간 저장 / start & end
-        state = .running(start: now, end: now.addingTimeInterval(totalTime))
+    func start() {
+        switch state {
+        case .idle:
+            setIndex = 1
+            startPhase(timeSec)
+        case .paused(let rem):
+            resume(rem)
+        case .running:
+            break
+        }
     }
     
     // 일시정지 : 남은 시간 저장
@@ -41,15 +72,10 @@ class TimerController: ObservableObject {
     }
     
     // 재시작.
-    func resume() {
-        // state가 paused일 때만 해당 함수 작동 가능. / 남은 시간이 0이상.
-        guard case .paused(let remainig) = state, remainig > 0 else {
-            return
-        }
-        
+    func resume(_ rem: TimeInterval) {
         let now = Date()
         // state 변경. running (지금 시간 부터 지금으로부터 남은 시간.)
-        state = .running(start: now, end: now.addingTimeInterval(remainig))
+        state = .running(start: now, end: now.addingTimeInterval(rem))
     }
     
     func stop() {
@@ -63,7 +89,7 @@ class TimerController: ObservableObject {
     func remaining(at now: Date) -> TimeInterval {
         switch state {
         case .idle:
-            return totalTime
+            return timeSec
         case .running(_, let end):
             return max(0, end.timeIntervalSince(now))
         case .paused(let remaing):
@@ -72,30 +98,57 @@ class TimerController: ObservableObject {
     }
     
     func progress(at now: Date) -> CGFloat {
+        let total = max(0.001, currentTotal())
         let rem = remaining(at: now)
-        guard totalTime > 0 else { return 0}
-        return CGFloat(rem / totalTime)
+        guard timeSec > 0 else { return 0}
+        return CGFloat(rem / total)
     }
     
     // 종료 체크
-    func tryFireEndIfNeeded(now: Date) {
+    func tryFireEndIfNeeded() {
+        let now = Date()
         if case .running(_, let end) = state, now >= end {
-            state = .idle
-            logger.d("tryFireEndInNeeded")
-            onEnded?()
+            logger.d("tryFireEndIfNeeded running now \(now) end \(end)")
+            advancePhase()
         }
-    }
-    
-    func setTotalTime(_ seconds: Int) {
-        totalTime = TimeInterval(max(1, seconds))
     }
     
     func displayRemaing(at now: Date) -> Int {
         switch state {
         case .idle:
-            return Int(ceil(totalTime))
+            return Int(ceil(timeSec))
         default:
             return Int(ceil(remaining(at: now)))
+        }
+    }
+    
+    // Time Lozic
+    func startPhase(_ duration: TimeInterval) {
+        let now = Date()
+        // state 변경 및 시간 저장 / start & end
+        state = .running(start: now, end: now.addingTimeInterval(duration))
+        logger.d("startPhase \(phase) \(setIndex)")
+        onPhaseChanged?(phase, setIndex)
+    }
+    
+    func advancePhase() {
+        logger.d("advancePhase")
+        if phase == .time {
+            logger.d("advancePhase phase == .time")
+            phase = .rest
+            startPhase(restSec)
+        }else{
+            if setIndex < totalSets {
+                logger.d("advancePhase setIndex < total")
+                setIndex += 1
+                phase = .time
+                startPhase(timeSec)
+            }else{
+                state = .idle
+                stop()
+                // 전체 끝
+                onEnded?()
+            }
         }
     }
 }
