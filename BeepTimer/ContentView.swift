@@ -10,8 +10,8 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var timerController = TimerController()
     
-    @State private var workoutTime: Int = 12
-    @State private var restTime: Int = 15
+    @State private var workoutTime: Int = 5
+    @State private var restTime: Int = 3
     @State private var setCount: Int = 3
     @State var currentSet: Int = 1
 
@@ -24,12 +24,12 @@ struct ContentView: View {
             VStack(spacing: 40) {
                 Spacer()
 
-                TimerHeaderView(totalTime: workoutTime, restTime: restTime, totalSets: setCount, currentSet: $currentSet)
+                TimerHeaderView(totalTime: workoutTime, restTime: restTime, totalSets: setCount, currentSet: timerController.setIndex)
                     .padding(.horizontal, 40)
                 
                 GeometryReader { geo in
                     let side = min(geo.size.width, geo.size.height)
-                    let ringWidth = max(12, side * 0.06)
+                    let ringWidth = max(22, side * 0.06)
                     
                     // 타이머 영역
                     CircleTimerView(controller: timerController, ringWidth: ringWidth)
@@ -39,12 +39,10 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
 
                 HStack{
-                    // 시작 버튼
                     Button(action: {
-                        // 타이머 시작
-                        timerController.start(total: workoutTime)
+                        timerController.stop()
                     }) {
-                        Text("재시작")
+                        Text("리셋")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.yellow)
@@ -57,12 +55,10 @@ struct ContentView: View {
                     // 시작 버튼
                     Button(action: {
                         switch timerController.state {
-                        case .idle:
-                            timerController.start(total: workoutTime)
+                        case .idle, .paused(_):
+                            timerController.start()
                         case .running(_, _):
                             timerController.pause()
-                        case .paused(_):
-                            timerController.resume()
                         }
                     }) {
                         Text(timerController.state.buttonTitle)
@@ -79,10 +75,7 @@ struct ContentView: View {
                 
             }
             .onAppear {
-                timerController.setTotalTime(workoutTime)
-                timerController.onEnded = {
-                    logger.d("time the end")
-                }
+                timerController.configure(time: workoutTime, rest: restTime, sets: setCount)
             }
         }
     }

@@ -12,6 +12,10 @@ struct CircleTimerView: View {
     
     var ringWidth: CGFloat = 20
     
+    let timeGrad = Color(hex: "#22D3EE")
+
+    let restGrad = Color(hex: "#FB923C")
+    
     func formattedValue(_ sec: Int) -> String {
         if sec < 60 {
             return "\(String(sec)) s"
@@ -31,21 +35,20 @@ struct CircleTimerView: View {
             ZStack {
                 Circle()
                     .stroke(style: StrokeStyle(lineWidth: ringWidth))
-                    .opacity(0.15)
-                    .foregroundColor(.gray)
+                    .foregroundColor(controller.phase == .time ? timeGrad : restGrad)
                 
                 Circle()
                     .trim(from: 0.0, to: p)
                     .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(controller.phase == .time ? restGrad : timeGrad)
                 
                 Text("\(formattedValue(remaining))")
                     .font(.system(size: max(24, ringWidth * 1.8), weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(hex: "#F3F4F6"))
             }
             .onChange(of: p) { _ in
-                controller.tryFireEndIfNeeded(now: Date())
+                controller.tryFireEndIfNeeded()
             }
             .padding(12)
         }
