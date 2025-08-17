@@ -132,22 +132,29 @@ class TimerController: ObservableObject {
     }
     
     func advancePhase() {
-        logger.d("advancePhase")
         if phase == .time {
-            logger.d("advancePhase phase == .time")
             phase = .rest
-            if SettingManager.shared.autoPlay {
+            switch SettingManager.shared.autoMode {
+            case .fullAuto, .setAuto:
+                logger.d("autoMode .fullAuto")
                 startPhase(restSec)
-            }else{
-                
+            case .manual:
+                logger.d("autoMode .setAuto / .manual")
+                state = .paused(remainig: restSec)
             }
-            
         }else{
             if setIndex < totalSets {
                 logger.d("advancePhase setIndex < total")
                 setIndex += 1
                 phase = .time
-                startPhase(timeSec)
+                switch SettingManager.shared.autoMode {
+                case .fullAuto:
+                    logger.d("autoMode .fullAuto")
+                    startPhase(timeSec)
+                case .setAuto, .manual:
+                    logger.d("autoMode .setAuto / .manual")
+                    state = .paused(remainig: timeSec)
+                }
             }else{
                 state = .idle
                 stop()

@@ -10,6 +10,8 @@ import SwiftUI
 struct CircleTimerView: View {
     @ObservedObject var controller: TimerController
     
+    @ObservedObject var settings = SettingManager.shared
+    
     var ringWidth: CGFloat = 20
     
     let timeGrad = Color(hex: "#22D3EE")
@@ -54,14 +56,31 @@ struct CircleTimerView: View {
                     
                     HStack{
                         Button {
-                            SettingManager.shared.autoPlay.toggle()
+                            switch settings.autoMode {
+                            case .fullAuto:
+                                settings.autoMode = .setAuto
+                            case .setAuto:
+                                settings.autoMode = .manual
+                            case .manual:
+                                settings.autoMode = .fullAuto
+                            }
                         }label: {
-                            Image(systemName: "autostartstop")
-                                .resizable()
-                                .frame(width: 20, height: 20)
-                                .foregroundStyle(Color(hex: "#F3F4F6"))
-                                .opacity(SettingManager.shared.autoPlay ? 0.5 : 1)
+                            switch settings.autoMode {
+                            case .fullAuto:
+                                Image(systemName: "repeat")
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                            case .setAuto:
+                                Image(systemName: "repeat.1")
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                            case .manual:
+                                Image(systemName: "forward.end")
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                            }
                         }
+                        .foregroundStyle(Color(hex: "#F3F4F6"))
                     }
                     .padding(.bottom, 20 + ringWidth)
                 }
