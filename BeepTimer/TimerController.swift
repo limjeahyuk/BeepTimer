@@ -136,7 +136,12 @@ class TimerController: ObservableObject {
         if phase == .time {
             logger.d("advancePhase phase == .time")
             phase = .rest
-            startPhase(restSec)
+            if SettingManager.shared.autoPlay {
+                startPhase(restSec)
+            }else{
+                
+            }
+            
         }else{
             if setIndex < totalSets {
                 logger.d("advancePhase setIndex < total")
