@@ -15,8 +15,8 @@ struct CircleTimerView: View {
     var ringWidth: CGFloat = 20
     var bottomGapFraction: CGFloat = 0.14
     
-    let timeGrad = Color(hex: "#22D3EE")
-    let restGrad = Color(hex: "#FB923C")
+    let timeColor = Color(hex: "#22D3EE")
+    let restColor = Color(hex: "#FB923C")
     
     func formattedValue(_ sec: Int) -> String {
         if sec < 60 {
@@ -31,72 +31,64 @@ struct CircleTimerView: View {
     var body: some View {
         TimelineView(.animation) { ctx in
             let now = ctx.date
-            let p = controller.progress(at: now)
             let remaining = controller.displayRemaing(at: now)
 
-            // 안전 범위로 클램프
-            let gap = min(max(bottomGapFraction, 0.04), 0.30)
+            // p: 남은 비율(1→0). fill: 채워진 비율(0→1)
+            let p = controller.progress(at: now)
+            let fill = max(0, min(1, 1 - Double(p)))
 
-            // 색 구성
-            let trackColor   = (controller.phase == .time ? timeGrad : restGrad).opacity(0.35)
-            let progressColor = (controller.phase == .time ? restGrad : timeGrad)
+            // 하단 갭 계산
+            let g = max(0.04, min(0.30, Double(bottomGapFraction)))
+            let leftEdge  = 0.75 - g/2.0
+            let rightEdge = 0.75 + g/2.0
+
+            // 트랙/진행 색
+            let trackColor    = (controller.phase == .time ? timeColor : restColor).opacity(0.35)
+            let progressColor = (controller.phase == .time ? restColor : timeColor)
 
             ZStack {
-                // ===============================
-                // 1) 트랙(배경 링): 아래만 비우기
-                //    trim 구간을 두 개로 나눠 그리면 "하단에만" gap이 생깁니다.
-                // ===============================
+                // ===== 트랙(배경 링): 하단 갭 비우고 두 조각으로 그리기 =====
+                // [0 .. leftEdge]
                 Circle()
-                    .trim(from: 0.0, to: 0.5 - gap/2)
-                    .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .foregroundColor(trackColor)
-
+                    .trim(from: 0.0, to: leftEdge)
+                    .stroke(trackColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                // [rightEdge .. 1]
                 Circle()
-                    .trim(from: 0.5 + gap/2, to: 1.0)
-                    .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .foregroundColor(trackColor)
+                    .trim(from: rightEdge, to: 1.0)
+                    .stroke(trackColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
 
-                // ===============================
-                // 2) 진행 링: 기존 0→p 로 그리되,
-                //    "같은 gap 마스크"로 하단 구간을 잘라냅니다.
-                // ===============================
-                Circle()
-                    .trim(from: 0.0, to: p)
-                    .stroke(style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                    .rotationEffect(.degrees(90))
-                    .scaleEffect(x: -1, y: 1, anchor: .center)
-                    .foregroundStyle(progressColor)
-                    .mask(
-                        ZStack {
-                            Circle()
-                                .trim(from: 0.0, to: 0.5 - gap/2)
-                                .stroke(Color.white, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                                .rotationEffect(.degrees(-90))
-                            Circle()
-                                .trim(from: 0.5 + gap/2, to: 1.0)
-                                .stroke(Color.white, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                                .rotationEffect(.degrees(-90))
-                        }
-                    )
+                // ===== 진행 링: 왼쪽 끝 → 오른쪽 끝 (위를 통해) =====
+                // 허용 경로 길이 = 1 - 갭
+                let allowed = 1.0 - g
+                let len = allowed * fill          // 채워야 할 길이
+                let end = leftEdge - len          // 감소 방향
 
-                // ===============================
-                // 3) 중앙 타이머 텍스트
-                // ===============================
-                Text("\(formattedValue(remaining))")
+                if end >= 0 {
+                    // 래핑 없음: [end .. leftEdge]
+                    Circle()
+                        .trim(from: end, to: leftEdge)
+                        .stroke(progressColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                } else {
+                    // 래핑: [0 .. leftEdge] + [1+end .. 1]
+                    Circle()
+                        .trim(from: 0.0, to: leftEdge)
+                        .stroke(progressColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                    Circle()
+                        .trim(from: 1.0 + end, to: 1.0)
+                        .stroke(progressColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                }
+
+                // ===== 중앙 타이머 텍스트 =====
+                Text(formattedValue(remaining))
                     .font(.system(size: max(24, ringWidth * 1.8), weight: .bold, design: .rounded))
                     .foregroundStyle(Color(hex: "#F3F4F6"))
                     .monospacedDigit()
 
-                // ===============================
-                // 4) 하단 gap 안쪽 컨트롤 (오토모드 토글 + 재생/일시정지)
-                //    gap 만큼 올려서 링과 겹치지 않게 합니다.
-                // ===============================
+                // ===== 하단 갭 안쪽 컨트롤 =====
                 VStack {
                     Spacer()
                     HStack(spacing: 28) {
-                        // --- 오토모드 토글 버튼 ---
+                        // 모드 토글
                         Button {
                             switch settings.autoMode {
                             case .fullAuto: settings.autoMode = .setAuto
@@ -108,13 +100,13 @@ struct CircleTimerView: View {
                                 switch settings.autoMode {
                                 case .fullAuto: "repeat"
                                 case .setAuto:  "repeat.1"
-                                case .manual:   "forward.end" // 또는 "hand.tap"
+                                case .manual:   "forward.end"
                                 }
                             }())
                             .font(.system(size: 18, weight: .semibold))
                         }
 
-                        // --- 재생/일시정지 버튼 ---
+                        // 재생/일시정지
                         Button {
                             togglePlay()
                         } label: {
@@ -123,13 +115,13 @@ struct CircleTimerView: View {
                         }
                     }
                     .foregroundStyle(Color(hex: "#F3F4F6"))
-                    // gap 중심보다 약간 위로 배치되도록 보정
                     .padding(.bottom, ringWidth * 0.7)
                 }
             }
-            .onChange(of: p) { _ in
-                controller.tryFireEndIfNeeded()
-            }
+            .rotationEffect(.degrees(180))
+            // 단계 바뀔 때 색 전환만 부드럽게
+            .animation(.easeInOut(duration: 0.25), value: controller.phase)
+            .onChange(of: p) { _ in controller.tryFireEndIfNeeded() }
             .padding(12)
         }
         .frame(maxWidth: .infinity)
