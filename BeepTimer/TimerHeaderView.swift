@@ -22,19 +22,19 @@ struct TimerHeaderView: View {
     
     var body: some View {
         HStack {
-            TimerInfoView(title: "Timer", value: totalTime)
+            TimerInfoView(title: "Time", value: totalTime)
             Spacer()
             TimerInfoView(title: "Rest", value: restTime)
             Spacer()
             VStack {
-                Text("Sets")
-                    .font(.fromCSSFont(16, weight: .semibold))
+                Text("Set")
+                    .font(.fromCSSFont(22, weight: .semibold))
                     .foregroundStyle(ColorManager.lightGray)
 
                 HStack(spacing: 8) {
 
-                Text("\(currentSet)/\(totalSets)")
-                    .font(.fromCSSFont(18, weight: .bold))
+                Text("\(currentSet) / \(totalSets)")
+                    .font(.fromCSSFont(26, weight: .bold))
                     .foregroundStyle(ColorManager.white)
                 }
             }
@@ -59,16 +59,16 @@ struct TimerInfoView: View {
     var body: some View {
         VStack {
             Text(title)
-                .font(.fromCSSFont(16, weight: .semibold))
+                .font(.fromCSSFont(22, weight: .semibold))
                 .foregroundStyle(ColorManager.lightGray)
 
             
             HStack(alignment: .bottom, spacing: 4) {
                 Text(formattedValue.main)
-                    .font(.fromCSSFont(18, weight: .bold))
+                    .font(.fromCSSFont(26, weight: .bold))
                 if let sub = formattedValue.sub {
                     Text(sub)
-                        .font(.fromCSSFont(16, weight: .bold))
+                        .font(.fromCSSFont(22, weight: .bold))
                 }
             }
             .foregroundStyle(ColorManager.white)
