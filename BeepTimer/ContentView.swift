@@ -26,7 +26,7 @@ struct ContentView: View {
 
                 TimerHeaderView(totalTime: workoutTime, restTime: restTime, totalSets: setCount, currentSet: timerController.setIndex)
                     .padding(.horizontal, 40)
-                
+
                 GeometryReader { geo in
                     let side = min(geo.size.width, geo.size.height)
                     let ringWidth = max(22, side * 0.06)

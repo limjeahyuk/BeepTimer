@@ -43,9 +43,28 @@ struct CircleTimerView: View {
                     .rotationEffect(.degrees(-90))
                     .foregroundStyle(controller.phase == .time ? restGrad : timeGrad)
                 
-                Text("\(formattedValue(remaining))")
-                    .font(.system(size: max(24, ringWidth * 1.8), weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(hex: "#F3F4F6"))
+                VStack {
+                    Spacer()
+                    
+                    Text("\(formattedValue(remaining))")
+                        .font(.system(size: max(24, ringWidth * 1.8), weight: .bold, design: .rounded))
+                        .foregroundStyle(Color(hex: "#F3F4F6"))
+                    
+                    Spacer()
+                    
+                    HStack{
+                        Button {
+                            SettingManager.shared.autoPlay.toggle()
+                        }label: {
+                            Image(systemName: "autostartstop")
+                                .resizable()
+                                .frame(width: 20, height: 20)
+                                .foregroundStyle(Color(hex: "#F3F4F6"))
+                                .opacity(SettingManager.shared.autoPlay ? 0.5 : 1)
+                        }
+                    }
+                    .padding(.bottom, 20 + ringWidth)
+                }
             }
             .onChange(of: p) { _ in
                 controller.tryFireEndIfNeeded()
