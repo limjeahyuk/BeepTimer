@@ -38,45 +38,31 @@ struct CircleTimerView: View {
             let fill = max(0, min(1, 1 - Double(p)))
 
             // 하단 갭 계산
+            // 0.0 - 3시 ~ 0.75 - 12시
             let g = max(0.04, min(0.30, Double(bottomGapFraction)))
-            let leftEdge  = 0.75 - g/2.0
-            let rightEdge = 0.75 + g/2.0
+            let leftEdge  = 1.0 - g/2.0
+            let rightEdge = g/2.0
+            let allowed = leftEdge - rightEdge
 
             // 트랙/진행 색
             let trackColor    = (controller.phase == .time ? timeColor : restColor).opacity(0.35)
             let progressColor = (controller.phase == .time ? restColor : timeColor)
+            
+            let ringRotation: Double = 90
 
             ZStack {
-                // ===== 트랙(배경 링): 하단 갭 비우고 두 조각으로 그리기 =====
-                // [0 .. leftEdge]
-                Circle()
-                    .trim(from: 0.0, to: leftEdge)
-                    .stroke(trackColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                // [rightEdge .. 1]
-                Circle()
-                    .trim(from: rightEdge, to: 1.0)
-                    .stroke(trackColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-
-                // ===== 진행 링: 왼쪽 끝 → 오른쪽 끝 (위를 통해) =====
-                // 허용 경로 길이 = 1 - 갭
-                let allowed = 1.0 - g
-                let len = allowed * fill          // 채워야 할 길이
-                let end = leftEdge - len          // 감소 방향
-
-                if end >= 0 {
-                    // 래핑 없음: [end .. leftEdge]
+                ZStack {
                     Circle()
-                        .trim(from: end, to: leftEdge)
-                        .stroke(progressColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                } else {
-                    // 래핑: [0 .. leftEdge] + [1+end .. 1]
+                        .trim(from: rightEdge, to: leftEdge)
+                        .stroke(trackColor, style: .init(lineWidth: ringWidth, lineCap: .round))
+                    
+                    let end = rightEdge + allowed * fill
                     Circle()
-                        .trim(from: 0.0, to: leftEdge)
-                        .stroke(progressColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
-                    Circle()
-                        .trim(from: 1.0 + end, to: 1.0)
-                        .stroke(progressColor, style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                        .trim(from: rightEdge, to: end)
+                        .stroke(progressColor, style: .init(lineWidth: ringWidth, lineCap: .round))
                 }
+                .rotationEffect(.degrees(ringRotation))
+                .animation(nil, value: controller.phase)
 
                 // ===== 중앙 타이머 텍스트 =====
                 Text(formattedValue(remaining))
@@ -118,9 +104,8 @@ struct CircleTimerView: View {
                     .padding(.bottom, ringWidth * 0.7)
                 }
             }
-            .rotationEffect(.degrees(180))
             // 단계 바뀔 때 색 전환만 부드럽게
-            .animation(.easeInOut(duration: 0.25), value: controller.phase)
+//            .animation(.easeInOut(duration: 0.25), value: controller.phase)
             .onChange(of: p) { _ in controller.tryFireEndIfNeeded() }
             .padding(12)
         }
