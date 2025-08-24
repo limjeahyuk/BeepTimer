@@ -10,8 +10,6 @@ import SwiftUI
 struct CircleTimerView: View {
     @ObservedObject var controller: TimerController
     
-    @ObservedObject var settings = SettingManager.shared
-    
     var ringWidth: CGFloat = 20
     var bottomGapFraction: CGFloat = 0.14
     
@@ -69,56 +67,34 @@ struct CircleTimerView: View {
                 }
                 .rotationEffect(.degrees(ringRotation))
                 .animation(nil, value: controller.phase)
-
+                
                 // ===== 중앙 타이머 텍스트 =====
                 Text(clockString(remaining))
-                    .font(.system(size: max(36, ringWidth * 2.2), weight: .bold, design: .rounded))
+                    .font(.system(size: max(42, ringWidth * 3), weight: .bold, design: .rounded))
                     .foregroundStyle(TimerColor.textPrimary)
                     .monospacedDigit()
                     .minimumScaleFactor(0.5)
                     .allowsTightening(true)
                     .contentTransition(.numericText())
-
-                // ===== 하단 갭 안쪽 컨트롤 =====
-                VStack {
+                    
+                VStack{
                     Spacer()
-                    HStack(spacing: 28) {
-                        // 모드 토글
-                        Button {
-                            switch settings.autoMode {
-                            case .fullAuto: settings.autoMode = .setAuto
-                            case .setAuto:  settings.autoMode = .manual
-                            case .manual:   settings.autoMode = .fullAuto
-                            }
-                        } label: {
-                            Image(systemName: {
-                                switch settings.autoMode {
-                                case .fullAuto: "repeat"
-                                case .setAuto:  "repeat.1"
-                                case .manual:   "repeat"
-                                }
-                            }())
-                            .font(.system(size: 18, weight: .semibold))
-                            .opacity(settings.autoMode == .manual ? 0.3 : 1)
-                        }
-
-                        // 재생/일시정지
-                        Button {
-                            togglePlay()
-                        } label: {
-                            Image(systemName: controller.isRunning ? "pause.fill" : "play.fill")
-                                .font(.system(size: 20, weight: .bold))
-                        }
-                    }
-                    .foregroundStyle(TimerColor.textPrimary)
-                    .padding(.bottom, ringWidth * 0.7)
+                    
+                    Image(systemName: controller.isRunning ? "pause.fill" : "play.fill")
+                        .font(.system(size: ringWidth * 2.2, weight: .bold))
+                        .foregroundStyle(.white)
                 }
+
+                
             }
             .onChange(of: p) { _ in controller.tryFireEndIfNeeded() }
             .padding(12)
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(1, contentMode: .fit)
+        .onTapGesture {
+            logger.d("circle Clickeds")
+        }
     }
     
     private func togglePlay() {
