@@ -14,18 +14,42 @@ struct ContentView: View {
     @State private var restTime: Int = 3
     @State private var setCount: Int = 3
     @State var currentSet: Int = 1
+    
+    func mmss(_ sec: Int) -> String {
+        let s = max(0, sec)
+        let m = s / 60
+        let ss = s % 60
+        return String(format: "%02d : %02d", m, ss)
+    }
+    
+    func clockString(_ total: Int) -> String {
+        let s = max(0, total)
+        if s >= 3600 {
+            let h = s / 3600
+            let m = (s % 3600) / 60
+            let ss = s % 60
+            return String(format: "%02d : %02d : %02d", h, m, ss)
+        }else{
+            return mmss(s)
+        }
+    }
 
     var body: some View {
         ZStack {
             // 화면 전체 색상.
-            Color(hex: "#1A1E24")
+            TimerColor.bg
                 .ignoresSafeArea()
 
             VStack(spacing: 40) {
                 Spacer()
-
-                TimerHeaderView(totalTime: workoutTime, restTime: restTime, totalSets: setCount, currentSet: timerController.setIndex)
-                    .padding(.horizontal, 40)
+                
+                HStack(spacing: 10){
+                    Text("SET")
+                    Text(String(timerController.setIndex))
+                }
+                .foregroundStyle(TimerColor.textPrimary)
+                .font(.fromCSSFont(36, weight: .bold))
+                .padding(.horizontal, 40)
 
                 GeometryReader { geo in
                     let side = min(geo.size.width, geo.size.height)
@@ -37,6 +61,28 @@ struct ContentView: View {
                         .position(x: geo.size.width / 2, y: geo.size.height / 2)
                 }
                 .frame(maxWidth: .infinity)
+                
+                VStack(spacing: 20){
+                    HStack{
+                        Text("Time")
+                        Spacer()
+                        Text(clockString(workoutTime))
+                    }
+                    HStack{
+                        Text("Rest")
+                        Spacer()
+                        Text(clockString(restTime))
+                    }
+                    HStack{
+                        Text("Set")
+                        Spacer()
+                        Text("\(timerController.setIndex)/\(setCount)")
+                    }
+                }
+                .foregroundStyle(TimerColor.textPrimary)
+                .font(.fromCSSFont(18, weight: .medium))
+                .padding(.horizontal, 40)
+                
 
                 HStack{
                     Button(action: {
@@ -45,8 +91,8 @@ struct ContentView: View {
                         Text("리셋")
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.yellow)
-                            .foregroundColor(.black)
+                            .background(TimerColor.btnResetBg)
+                            .foregroundColor(TimerColor.btnText)
                             .font(.title2.bold())
                             .cornerRadius(16)
                             .padding(.horizontal)
@@ -64,8 +110,8 @@ struct ContentView: View {
                         Text(timerController.state.buttonTitle)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.green)
-                            .foregroundColor(.black)
+                            .background(TimerColor.btnStartBg)
+                            .foregroundColor(TimerColor.btnText)
                             .font(.title2.bold())
                             .cornerRadius(16)
                             .padding(.horizontal)

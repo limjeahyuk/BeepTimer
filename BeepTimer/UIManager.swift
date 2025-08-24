@@ -7,11 +7,18 @@
 
 import SwiftUI
 
-struct ColorManager {
-    static let white = Color(hex: "#FFFFFF")
-    static let lightGray = Color(hex: "#CCCCCC")
-    static let mainColor = Color(hex: "#1A1E24")
-    static let timerCircle = Color(hex: "#00D26A")
+enum TimerColor {
+    static let bg            = Color(hex: "#1A1E24")
+    static let textPrimary   = Color(hex: "#F3F4F6")
+    static let textSecondary = Color.white.opacity(0.65)
+
+    static let ringTrack     = Color.white.opacity(0.12)  // ← 항상 고정
+    static let ringTime      = Color(hex: "#22D3EE")      // Cyan 400
+    static let ringRest      = Color(hex: "#F59E0B")      // Amber 500
+
+    static let btnStartBg    = Color(hex: "#22C55E")      // Green 500
+    static let btnResetBg    = Color(hex: "#F59E0B")      // Amber 500
+    static let btnText       = Color.white
 }
 
 extension Color {
