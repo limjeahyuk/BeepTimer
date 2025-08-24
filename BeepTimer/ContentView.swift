@@ -10,6 +10,8 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var timerController = TimerController()
     
+    @ObservedObject var settings = SettingManager.shared
+    
     @State private var workoutTime: Int = 5
     @State private var restTime: Int = 3
     @State private var setCount: Int = 3
@@ -40,9 +42,7 @@ struct ContentView: View {
             TimerColor.bg
                 .ignoresSafeArea()
 
-            VStack(spacing: 40) {
-                Spacer()
-                
+            VStack(spacing: 20) {
                 HStack(spacing: 10){
                     Text("SET")
                     Text(String(timerController.setIndex))
@@ -61,6 +61,66 @@ struct ContentView: View {
                         .position(x: geo.size.width / 2, y: geo.size.height / 2)
                 }
                 .frame(maxWidth: .infinity)
+                .aspectRatio(1, contentMode: .fit)
+                
+                HStack(spacing: 24){
+                    
+                    Button {
+                        logger.d("backward fill")
+                    } label: {
+                        Image(systemName: "backward.fill")
+                            .resizable()
+                            .frame(width: 22, height: 18)
+                    }
+                    
+                    Spacer()
+                    
+                    Button {
+                        switch settings.autoMode {
+                        case .fullAuto: settings.autoMode = .setAuto
+                        case .setAuto:  settings.autoMode = .manual
+                        case .manual:   settings.autoMode = .fullAuto
+                        }
+                    } label: {
+                        Image(systemName: {
+                            switch settings.autoMode {
+                            case .fullAuto: "repeat"
+                            case .setAuto:  "repeat.1"
+                            case .manual:   "repeat"
+                            }
+                        }())
+                        .resizable()
+                        .frame(width: 22, height: 22)
+                        .font(.system(size: 18, weight: .semibold))
+                        .opacity(settings.autoMode == .manual ? 0.3 : 1)
+                    }
+                    
+                    Spacer()
+                    
+                    Button {
+                        logger.d("backward fill")
+                    } label: {
+                        Image(systemName: "forward.fill")
+                            .resizable()
+                            .frame(width: 22, height: 18)
+                    }
+                    
+                }
+                .frame(height: 48)
+                .frame(maxWidth: 220, alignment: .center)
+                .padding(.horizontal, 40)
+                .background(
+                    ZStack {
+                        Capsule().fill(.ultraThinMaterial).opacity(0.18)
+                        Capsule().fill(Color.white.opacity(0.22))
+                    }
+                )
+                .overlay(
+                    Capsule().stroke(Color.white.opacity(0.05), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
+                .foregroundStyle(Color.white)
+                
                 
                 VStack(spacing: 20){
                     HStack{
@@ -82,42 +142,43 @@ struct ContentView: View {
                 .foregroundStyle(TimerColor.textPrimary)
                 .font(.fromCSSFont(18, weight: .medium))
                 .padding(.horizontal, 40)
+                .padding(.bottom, 24)
                 
 
-                HStack{
-                    Button(action: {
-                        timerController.stop()
-                    }) {
-                        Text("리셋")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(TimerColor.btnResetBg)
-                            .foregroundColor(TimerColor.btnText)
-                            .font(.title2.bold())
-                            .cornerRadius(16)
-                            .padding(.horizontal)
-                    }
-                    
-                    // 시작 버튼
-                    Button(action: {
-                        switch timerController.state {
-                        case .idle, .paused(_):
-                            timerController.start()
-                        case .running(_, _):
-                            timerController.pause()
-                        }
-                    }) {
-                        Text(timerController.state.buttonTitle)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(TimerColor.btnStartBg)
-                            .foregroundColor(TimerColor.btnText)
-                            .font(.title2.bold())
-                            .cornerRadius(16)
-                            .padding(.horizontal)
-                    }
-                }
-                .padding(.bottom, 24)
+//                HStack{
+//                    Button(action: {
+//                        timerController.stop()
+//                    }) {
+//                        Text("리셋")
+//                            .frame(maxWidth: .infinity)
+//                            .padding()
+//                            .background(TimerColor.btnResetBg)
+//                            .foregroundColor(TimerColor.btnText)
+//                            .font(.title2.bold())
+//                            .cornerRadius(16)
+//                            .padding(.horizontal)
+//                    }
+//                    
+//                    // 시작 버튼
+//                    Button(action: {
+//                        switch timerController.state {
+//                        case .idle, .paused(_):
+//                            timerController.start()
+//                        case .running(_, _):
+//                            timerController.pause()
+//                        }
+//                    }) {
+//                        Text(timerController.state.buttonTitle)
+//                            .frame(maxWidth: .infinity)
+//                            .padding()
+//                            .background(TimerColor.btnStartBg)
+//                            .foregroundColor(TimerColor.btnText)
+//                            .font(.title2.bold())
+//                            .cornerRadius(16)
+//                            .padding(.horizontal)
+//                    }
+//                }
+//                .padding(.bottom, 24)
                 
             }
             .onAppear {
