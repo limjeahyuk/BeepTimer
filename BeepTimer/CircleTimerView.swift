@@ -15,16 +15,22 @@ struct CircleTimerView: View {
     var ringWidth: CGFloat = 20
     var bottomGapFraction: CGFloat = 0.14
     
-    let timeColor = Color(hex: "#22D3EE")
-    let restColor = Color(hex: "#FB923C")
+    func mmss(_ sec: Int) -> String {
+        let s = max(0, sec)
+        let m = s / 60
+        let ss = s % 60
+        return String(format: "%02d : %02d", m, ss)
+    }
     
-    func formattedValue(_ sec: Int) -> String {
-        if sec < 60 {
-            return "\(String(sec)) s"
-        } else if sec % 60 == 0 {
-            return "\(sec / 60) m"
-        } else {
-            return "\(sec / 60)m \(sec % 60)s"
+    func clockString(_ total: Int) -> String {
+        let s = max(0, total)
+        if s >= 3600 {
+            let h = s / 3600
+            let m = (s % 3600) / 60
+            let ss = s % 60
+            return String(format: "%02d : %02d : %02d", h, m, ss)
+        }else{
+            return mmss(s)
         }
     }
 
@@ -45,8 +51,8 @@ struct CircleTimerView: View {
             let allowed = leftEdge - rightEdge
 
             // 트랙/진행 색
-            let trackColor    = (controller.phase == .time ? timeColor : restColor).opacity(0.35)
-            let progressColor = (controller.phase == .time ? restColor : timeColor)
+            let trackColor    = (controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest).opacity(0.35)
+            let progressColor = (controller.phase == .time ? TimerColor.ringRest : TimerColor.ringTime)
             
             let ringRotation: Double = 90
 
@@ -65,10 +71,13 @@ struct CircleTimerView: View {
                 .animation(nil, value: controller.phase)
 
                 // ===== 중앙 타이머 텍스트 =====
-                Text(formattedValue(remaining))
-                    .font(.system(size: max(24, ringWidth * 1.8), weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(hex: "#F3F4F6"))
+                Text(clockString(remaining))
+                    .font(.system(size: max(36, ringWidth * 2.2), weight: .bold, design: .rounded))
+                    .foregroundStyle(TimerColor.textPrimary)
                     .monospacedDigit()
+                    .minimumScaleFactor(0.5)
+                    .allowsTightening(true)
+                    .contentTransition(.numericText())
 
                 // ===== 하단 갭 안쪽 컨트롤 =====
                 VStack {
@@ -86,10 +95,11 @@ struct CircleTimerView: View {
                                 switch settings.autoMode {
                                 case .fullAuto: "repeat"
                                 case .setAuto:  "repeat.1"
-                                case .manual:   "forward.end"
+                                case .manual:   "repeat"
                                 }
                             }())
                             .font(.system(size: 18, weight: .semibold))
+                            .opacity(settings.autoMode == .manual ? 0.3 : 1)
                         }
 
                         // 재생/일시정지
@@ -100,12 +110,10 @@ struct CircleTimerView: View {
                                 .font(.system(size: 20, weight: .bold))
                         }
                     }
-                    .foregroundStyle(Color(hex: "#F3F4F6"))
+                    .foregroundStyle(TimerColor.textPrimary)
                     .padding(.bottom, ringWidth * 0.7)
                 }
             }
-            // 단계 바뀔 때 색 전환만 부드럽게
-//            .animation(.easeInOut(duration: 0.25), value: controller.phase)
             .onChange(of: p) { _ in controller.tryFireEndIfNeeded() }
             .padding(12)
         }
