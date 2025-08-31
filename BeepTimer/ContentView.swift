@@ -14,7 +14,7 @@ struct ContentView: View {
     
     @State private var workoutTime: Int = 5
     @State private var restTime: Int = 3
-    @State private var setCount: Int = 3
+    @State private var setCount: Int = 1
     @State var currentSet: Int = 1
     
     func mmss(_ sec: Int) -> String {
@@ -144,56 +144,14 @@ struct ContentView: View {
                 .padding(.horizontal, 40)
                 .padding(.bottom, 24)
                 
-
-//                HStack{
-//                    Button(action: {
-//                        timerController.stop()
-//                    }) {
-//                        Text("리셋")
-//                            .frame(maxWidth: .infinity)
-//                            .padding()
-//                            .background(TimerColor.btnResetBg)
-//                            .foregroundColor(TimerColor.btnText)
-//                            .font(.title2.bold())
-//                            .cornerRadius(16)
-//                            .padding(.horizontal)
-//                    }
-//                    
-//                    // 시작 버튼
-//                    Button(action: {
-//                        switch timerController.state {
-//                        case .idle, .paused(_):
-//                            timerController.start()
-//                        case .running(_, _):
-//                            timerController.pause()
-//                        }
-//                    }) {
-//                        Text(timerController.state.buttonTitle)
-//                            .frame(maxWidth: .infinity)
-//                            .padding()
-//                            .background(TimerColor.btnStartBg)
-//                            .foregroundColor(TimerColor.btnText)
-//                            .font(.title2.bold())
-//                            .cornerRadius(16)
-//                            .padding(.horizontal)
-//                    }
-//                }
-//                .padding(.bottom, 24)
-                
             }
             .onAppear {
                 timerController.configure(time: workoutTime, rest: restTime, sets: setCount)
+                
+                timerController.onEnded = {
+                    logger.d("contentView setting onEnded")
+                }
             }
-        }
-    }
-}
-
-extension TimerController.State {
-    var buttonTitle: String {
-        switch self {
-        case .running: return "일시정지"
-        case .paused: return "재개"
-        case .idle: return "시작"
         }
     }
 }

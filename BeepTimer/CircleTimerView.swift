@@ -49,8 +49,8 @@ struct CircleTimerView: View {
             let allowed = leftEdge - rightEdge
 
             // 트랙/진행 색
-            let trackColor    = (controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest).opacity(0.35)
-            let progressColor = (controller.phase == .time ? TimerColor.ringRest : TimerColor.ringTime)
+            let trackColor    = (controller.phase == .time ? TimerColor.ringRest : TimerColor.ringTime).opacity(0.35)
+            let progressColor = (controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest)
             
             let ringRotation: Double = 90
 
@@ -78,13 +78,21 @@ struct CircleTimerView: View {
                     .contentTransition(.numericText())
                     
                 VStack{
+                    Text(controller.phase == .time ? "Time" : "Rest")
+                        .font(.system(size: max(12, ringWidth * 1.5), weight: .bold, design: .rounded))
+                        .foregroundStyle(controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest)
+                        .monospacedDigit()
+                        .minimumScaleFactor(0.5)
+                        .allowsTightening(true)
+                        .contentTransition(.numericText())
+                        .padding(.top, ringWidth + 15)
+                    
                     Spacer()
                     
                     Image(systemName: controller.isRunning ? "pause.fill" : "play.fill")
                         .font(.system(size: ringWidth * 2.2, weight: .bold))
                         .foregroundStyle(.white)
                 }
-
                 
             }
             .onChange(of: p) { _ in controller.tryFireEndIfNeeded() }
@@ -94,6 +102,7 @@ struct CircleTimerView: View {
         .aspectRatio(1, contentMode: .fit)
         .onTapGesture {
             logger.d("circle Clickeds")
+            togglePlay()
         }
     }
     
