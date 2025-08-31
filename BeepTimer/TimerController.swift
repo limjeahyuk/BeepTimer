@@ -36,10 +36,12 @@ class TimerController: ObservableObject {
     var onEnded: (() -> Void)?
     var onPhaseChanged: ((Phase, Int) -> Void)?
     
+    // phase에 맞춰서 설정되어있는 time
     func currentTotal() -> TimeInterval {
         phase == .time ? timeSec : restSec
     }
     
+    // 초기화
     func configure(time: Int, rest: Int, sets: Int){
         timeSec = TimeInterval(time)
         restSec = TimeInterval(rest)
@@ -78,8 +80,10 @@ class TimerController: ObservableObject {
         state = .running(start: now, end: now.addingTimeInterval(rem))
     }
     
+    // 멈추기
     func stop() {
         state = .idle
+        phase = .time
     }
     
     // 현재 시각 기준 남은 시간 / 진행률
@@ -131,6 +135,8 @@ class TimerController: ObservableObject {
         onPhaseChanged?(phase, setIndex)
     }
     
+    // 끝났을때
+    // 추후에 Time 다음이 Rest가 아닌건 여기서 작업.
     func advancePhase() {
         if phase == .time {
             phase = .rest
@@ -157,10 +163,46 @@ class TimerController: ObservableObject {
                 }
             }else{
                 state = .idle
+                phase = .time
                 stop()
-                // 전체 끝
                 onEnded?()
+                
             }
         }
     }
+    
+    func goToSet(_ target: Int) -> Bool {
+        let clamped = max(1, min(totalSets, target))
+        guard clamped != setIndex || phase != .time else {
+            startPhase(timeSec)
+            return true
+        }
+        
+        setIndex = clamped
+        phase = .time
+        startPhase(timeSec)
+        retunr true
+    }
+    
+    func previousSet() -> Bool {
+        guard setIndex > 1 else { return false }
+        setIndex -= 1
+        phase = .time
+        startPhase(timeSec)
+        return true
+    }
+    
+    func nextSet() -> Bool {
+        guard setIndex < totalSets else {
+            // 마지막 세트에서 더 못 올라감.
+            // stop() & onEnded?()
+            return false
+        }
+        setIndex += 1
+        phase = .time
+        startPhase(timeSec)
+        return true
+    }
+    
+    
 }
