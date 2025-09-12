@@ -181,7 +181,7 @@ class TimerController: ObservableObject {
         setIndex = clamped
         phase = .time
         startPhase(timeSec)
-        retunr true
+        return true
     }
     
     func previousSet() -> Bool {
