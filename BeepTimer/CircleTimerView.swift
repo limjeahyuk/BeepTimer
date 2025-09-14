@@ -100,6 +100,7 @@ struct CircleTimerView: View {
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(1, contentMode: .fit)
+        .contentShape(Circle()) // 원 전체 클릭 되도록
         .onTapGesture {
             logger.d("circle Clickeds")
             togglePlay()

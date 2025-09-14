@@ -203,6 +203,4 @@ class TimerController: ObservableObject {
         startPhase(timeSec)
         return true
     }
-    
-    
 }
