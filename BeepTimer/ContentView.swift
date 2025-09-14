@@ -14,7 +14,7 @@ struct ContentView: View {
     
     @State private var workoutTime: Int = 5
     @State private var restTime: Int = 3
-    @State private var setCount: Int = 1
+    @State private var setCount: Int = 2
     @State var currentSet: Int = 1
     
     func mmss(_ sec: Int) -> String {
@@ -50,6 +50,7 @@ struct ContentView: View {
                 .foregroundStyle(TimerColor.textPrimary)
                 .font(.fromCSSFont(36, weight: .bold))
                 .padding(.horizontal, 40)
+                .padding(.top, 20)
 
                 GeometryReader { geo in
                     let side = min(geo.size.width, geo.size.height)
@@ -67,6 +68,9 @@ struct ContentView: View {
                     
                     Button {
                         logger.d("backward fill")
+                        if !timerController.previousSet() {
+                            logger.d("timerController previousSet fail")
+                        }
                     } label: {
                         Image(systemName: "backward.fill")
                             .resizable()
@@ -99,6 +103,9 @@ struct ContentView: View {
                     
                     Button {
                         logger.d("backward fill")
+                        if !timerController.nextSet() {
+                            logger.d("end point")
+                        }
                     } label: {
                         Image(systemName: "forward.fill")
                             .resizable()
