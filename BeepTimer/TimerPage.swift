@@ -25,7 +25,9 @@ struct TimerPager: View {
 
             // 1: 라이브러리
             NavigationStack {
-                TimerLibraryView(presets: presets) { p in
+                TimerLibraryView(onPick: { t in
+                    logger.d("ttt\(t)")
+                }, presets: presets) { p in
                     controller.configure(time: p.time, rest: p.rest, sets: p.sets)
                     controller.stop()
                     controller.start()
