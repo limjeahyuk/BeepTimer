@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import RealmSwift
 
 struct TimerPreset: Identifiable, Equatable {
     let id = UUID()
@@ -16,27 +17,31 @@ struct TimerPreset: Identifiable, Equatable {
 }
 
 struct TimerLibraryView: View {
+    @ObservedResults(RTimerProgram.self,
+                     sortDescriptor: SortDescriptor(keyPath: "createdAt", ascending: false))
+    var programs
+
+    let onPick: (TimerModel) -> Void
+    
     let presets: [TimerPreset]
     let select: (TimerPreset) -> Void
 
     var body: some View {
-        List(presets) { p in
-            Button {
-                select(p)
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(p.name).font(.headline)
-                        Text("\(p.time)s • Rest \(p.rest)s • \(p.sets) sets")
+        List {
+            ForEach(programs) { p in
+                Button {
+                    onPick(p.toModel())
+                } label: {
+                    HStack {
+                        Text(p.title).font(.headline)
+                        Spacer()
+                        Text("\(p.steps.filter { $0.kindRaw == "time" }.count) sets")
                             .foregroundStyle(.secondary)
-                            .font(.subheadline)
                     }
-                    Spacer()
-                    Image(systemName: "play.circle.fill").font(.title3)
                 }
             }
+            .onDelete(perform: $programs.remove)
         }
-        .listStyle(.insetGrouped)
         .navigationTitle("Timers")
     }
 }
