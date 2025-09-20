@@ -76,7 +76,7 @@ struct TimerLibraryView: View {
                         HStack {
                             Text(p.title).font(.headline)
                             Spacer()
-                            Text("\(p.steps.filter { $0.kindRaw == "time" }.count) sets")
+                            Text("\(p.steps.filter { $0.kindRaw == "time" }.count) setsㅇ")
                                 .foregroundStyle(.secondary)
                         }
                     }
