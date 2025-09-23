@@ -44,46 +44,73 @@ struct TimerLibraryView: View {
     }
 
     var body: some View {
-        VStack{
-            HStack {
-                Text("Timers")
-                    .font(.fromCSSFont(24, weight: .bold))
-                
-                Spacer()
-                
-                Button{
-                    logger.d("plus Btn Action")
+        ZStack {
+            TimerColor.bg.ignoresSafeArea()
+            
+            VStack(spacing: 0){
+                HStack {
+                    Text("Timers")
+                        .font(.fromCSSFont(24, weight: .bold))
+                        .foregroundStyle(.white)
                     
-                    // 기본 제목과 빈 스텝으로 새 항목 생성
-                   let title = nextDefaultTitle(from: programs)
-                   let obj = RTimerProgram()
-                   obj.title = title
-                   obj.createdAt = Date()
-                   obj.steps = .init() // 비어있는 상태로 생성(나중에 편집)
-                   $programs.append(obj)  // ObservedResults가 write 트랜잭션 처리
-                }label: {
-                    Image(systemName: "plus")
-                        .resizable()
-                        .frame(width: 22, height: 18)
-                }
-            }
-            .padding(20)
-            List {
-                ForEach(programs) { p in
-                    Button {
-                        onPick(p.toModel())
+                    Spacer()
+                    
+                    Button{
+                        logger.d("plus Btn Action")
+                        
+                        // 기본 제목과 빈 스텝으로 새 항목 생성
+                        let title = nextDefaultTitle(from: programs)
+                        let obj = RTimerProgram()
+                        obj.title = title
+                        obj.createdAt = Date()
+                        obj.steps = .init() // 비어있는 상태로 생성(나중에 편집)
+                        $programs.append(obj)  // ObservedResults가 write 트랜잭션 처리
                     } label: {
-                        HStack {
-                            Text(p.title).font(.headline)
-                            Spacer()
-                            Text("\(p.steps.filter { $0.kindRaw == "time" }.count) setsㅇ")
-                                .foregroundStyle(.secondary)
+                        Image(systemName: "plus")
+                            .resizable()
+                            .frame(width: 22, height: 18)
+                    }
+                    .accessibilityLabel("새 타이머 추가")
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                
+                if programs.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "timer.circle")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.white.opacity(0.5))
+                        
+                        Text("타이머가 없습니다.")
+                            .foregroundStyle(TimerColor.textPrimary)
+                            .font(.fromCSSFont(18, weight: .semibold))
+                        
+                        Text("오른쪽 위 + 버튼으로 추가하세요.")
+                            .foregroundStyle(TimerColor.textSecondary)
+                            .font(.subheadline)
+                    }
+                    .padding(.top, 60)
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(programs) { p in
+                                ProgramRowCard(program: p,
+                                               onStart: { onPick(p.toModel()) },
+                                               onDelete: { $programs.remove(p) },
+                                               onDuplicate: {
+                                    clone in $programs.append(clone)
+                                })
+                                .padding(.horizontal, 16)
+                            }
+                            .padding(.vertical, 8)
                         }
                     }
                 }
-                .onDelete(perform: $programs.remove)
             }
         }
+        .navigationBarHidden(true)
+            
     }
 }
 
