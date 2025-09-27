@@ -89,7 +89,9 @@ struct ProgramRowCard: View {
                     }
                     
                     HStack(spacing: 8) {
-                        SummaryChip(text: "Total \(mmss(totalSec))")
+                        SummaryChip(text: "Total \(mmss(totalSec))") {
+                            logger.d("123")
+                        }
                         SummaryChip(text: "Time \(timeCount)")
                         SummaryChip(text: "Rest \(restCount)")
                     }
@@ -160,12 +162,18 @@ struct ProgramRowCard: View {
 
 struct SummaryChip: View {
     let text: String
+    var action: () -> Void = {}
+    
     var body: some View {
-        Text(text)
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(TimerColor.textSecondary)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 10)
-            .background(Color.white.opacity(0.07), in: Capsule())
+        Button(action: action) {
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(TimerColor.textSecondary)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(Color.white.opacity(0.07), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule())
     }
 }
