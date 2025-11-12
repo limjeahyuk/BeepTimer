@@ -23,9 +23,6 @@ struct TimerLibraryView: View {
 
     let onPick: (TimerModel) -> Void
     
-    let presets: [TimerPreset]
-    let select: (TimerPreset) -> Void
-    
     /// 현재 목록에서 "TimerN"의 최댓값을 찾아 "Timer\(N+1)" 반환
     private func nextDefaultTitle(from programs: Results<RTimerProgram>) -> String {
         let pattern = #"^\s*Timer\s*(\d+)\s*$"#
@@ -56,19 +53,23 @@ struct TimerLibraryView: View {
                     Spacer()
                     
                     Button{
-                        logger.d("plus Btn Action")
-                        
                         // 기본 제목과 빈 스텝으로 새 항목 생성
                         let title = nextDefaultTitle(from: programs)
                         let obj = RTimerProgram()
                         obj.title = title
                         obj.createdAt = Date()
-                        obj.steps = .init() // 비어있는 상태로 생성(나중에 편집)
+                        
+                        let steps = List<RStep>()
+                        let t = RStep(); t.kindRaw = "time"; t.seconds = 30   // 기본 Time
+                        let r = RStep(); r.kindRaw = "rest"; r.seconds = 15   // 기본 Rest
+                        steps.append(objectsIn: [t, r])
+                        obj.steps = steps
+                        
                         $programs.append(obj)  // ObservedResults가 write 트랜잭션 처리
                     } label: {
                         Image(systemName: "plus")
                             .resizable()
-                            .frame(width: 22, height: 18)
+                            .frame(width: 22, height: 22)
                     }
                     .accessibilityLabel("새 타이머 추가")
                 }
@@ -92,15 +93,31 @@ struct TimerLibraryView: View {
                     }
                     .padding(.top, 60)
                 } else {
+                    let activeId = ActiveProgramStore.activeId()
+                    let sorted = Array(programs).sorted { a, b in
+                        let aActive = ActiveProgramStore.isActive(a, activeId: activeId)
+                        let bActive = ActiveProgramStore.isActive(b, activeId: activeId)
+                        if aActive != bActive { return aActive && !bActive }           // 활성 먼저
+                        return a.createdAt > b.createdAt                               // 최신순
+                    }
+                    
                     ScrollView {
                         LazyVStack(spacing: 12) {
-                            ForEach(programs) { p in
+                            ForEach(sorted, id: \._id) { p in
                                 ProgramRowCard(program: p,
-                                               onStart: { onPick(p.toModel()) },
-                                               onDelete: { $programs.remove(p) },
-                                               onDuplicate: {
-                                    clone in $programs.append(clone)
-                                })
+                                               onStart: {
+                                                    ActiveProgramStore.setActive(p)
+                                                    onPick(p.toModel())
+                                                },
+                                               onDelete: {
+                                                    ActiveProgramStore.clearIfMatches(p)
+                                                    $programs.remove(p)
+                                                },
+                                               onDuplicate: {clone in
+                                                    $programs.append(clone)
+                                                },
+                                               isActive: ActiveProgramStore.isActive(p, activeId: activeId)
+                                )
                                 .padding(.horizontal, 16)
                             }
                             .padding(.vertical, 8)

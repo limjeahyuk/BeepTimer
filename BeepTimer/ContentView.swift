@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var timerController = TimerController()
+    @EnvironmentObject var controller: TimerController
     
     @ObservedObject var settings = SettingManager.shared
     
@@ -43,10 +43,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 20) {
-                HStack(spacing: 10){
-                    Text("SET")
-                    Text(String(timerController.setIndex))
-                }
+                Text(controller.timerTitle)
                 .foregroundStyle(TimerColor.textPrimary)
                 .font(.fromCSSFont(36, weight: .bold))
                 .padding(.horizontal, 40)
@@ -57,7 +54,7 @@ struct ContentView: View {
                     let ringWidth = max(22, side * 0.06)
                     
                     // 타이머 영역
-                    CircleTimerView(controller: timerController, ringWidth: ringWidth)
+                    CircleTimerView(controller: controller, ringWidth: ringWidth)
                         .frame(width: side - 24, height: side - 24)
                         .position(x: geo.size.width / 2, y: geo.size.height / 2)
                 }
@@ -68,7 +65,7 @@ struct ContentView: View {
                     
                     Button {
                         logger.d("backward fill")
-                        if !timerController.previousSet() {
+                        if !controller.previousSet() {
                             logger.d("timerController previousSet fail")
                         }
                     } label: {
@@ -103,7 +100,7 @@ struct ContentView: View {
                     
                     Button {
                         logger.d("backward fill")
-                        if !timerController.nextSet() {
+                        if !controller.nextSet() {
                             logger.d("end point")
                         }
                     } label: {
@@ -133,17 +130,17 @@ struct ContentView: View {
                     HStack{
                         Text("Time")
                         Spacer()
-                        Text(clockString(workoutTime))
+                        Text(clockString(Int(controller.timeSec)))
                     }
                     HStack{
                         Text("Rest")
                         Spacer()
-                        Text(clockString(restTime))
+                        Text(clockString(Int(controller.restSec)))
                     }
                     HStack{
                         Text("Set")
                         Spacer()
-                        Text("\(timerController.setIndex)/\(setCount)")
+                        Text("\(controller.setIndex)/\(controller.totalSets)")
                     }
                 }
                 .foregroundStyle(TimerColor.textPrimary)
@@ -153,9 +150,15 @@ struct ContentView: View {
                 
             }
             .onAppear {
-                timerController.configure(time: workoutTime, rest: restTime, sets: setCount)
                 
-                timerController.onEnded = {
+                if let last = controller.loadLastUsed() {
+                    controller.configure(title: last.title, time: Int(TimeInterval(max(0, last.time))), rest: Int(TimeInterval(max(0, last.rest))), sets: max(1, last.sets))
+                } else {
+                    // 기본값 그대로: 30 / 15 / 3
+                    controller.configure(title: "Beep Timer", time: 30, rest: 10, sets: 3)
+                }
+                
+                controller.onEnded = {
                     logger.d("contentView setting onEnded")
                 }
             }

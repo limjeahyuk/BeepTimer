@@ -22,6 +22,7 @@ class TimerController: ObservableObject {
     }
     
     // config를 이용하여 설정
+    @Published var timerTitle: String = "Beep Timer"
     @Published var timeSec: TimeInterval = 30
     @Published var restSec: TimeInterval = 15
     @Published var totalSets: Int = 3
@@ -42,7 +43,8 @@ class TimerController: ObservableObject {
     }
     
     // 초기화
-    func configure(time: Int, rest: Int, sets: Int){
+    func configure(title: String, time: Int, rest: Int, sets: Int){
+        timerTitle = title
         timeSec = TimeInterval(time)
         restSec = TimeInterval(rest)
         totalSets = sets
@@ -203,4 +205,38 @@ class TimerController: ObservableObject {
         startPhase(timeSec)
         return true
     }
+    
+    // 저장
+    struct LastConfig: Codable {
+        let title: String
+        let time: Int
+        let rest: Int
+        let sets: Int
+        let updatedAt: Date
+    }
+
+    let lastConfigKey = "TimerController.lastConfig.v1"
+
+    // 저장
+    func saveLastUsed() {
+        let cfg = LastConfig(
+            title: timerTitle,
+            time: Int(timeSec),
+            rest: Int(restSec),
+            sets: totalSets,
+            updatedAt: Date()
+        )
+        if let data = try? JSONEncoder().encode(cfg) {
+            UserDefaults.standard.set(data, forKey: lastConfigKey)
+        }
+    }
+
+    // 로드
+    func loadLastUsed() -> LastConfig? {
+        guard let data = UserDefaults.standard.data(forKey: lastConfigKey),
+              let cfg = try? JSONDecoder().decode(LastConfig.self, from: data)
+        else { return nil }
+        return cfg
+    }
+    
 }

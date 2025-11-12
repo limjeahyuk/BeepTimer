@@ -92,6 +92,8 @@ struct CircleTimerView: View {
                     Image(systemName: controller.isRunning ? "pause.fill" : "play.fill")
                         .font(.system(size: ringWidth * 2.2, weight: .bold))
                         .foregroundStyle(.white)
+                    
+                    
                 }
                 
             }
