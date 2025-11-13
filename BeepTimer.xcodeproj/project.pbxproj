@@ -7,11 +7,35 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B5149472EC56D0C00FA0595 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B5149462EC56D0C00FA0595 /* WidgetKit.framework */; };
+		0B5149492EC56D0C00FA0595 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B5149482EC56D0C00FA0595 /* SwiftUI.framework */; };
+		0B51495A2EC56D0E00FA0595 /* BeepTimerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0B5149442EC56D0C00FA0595 /* BeepTimerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0B5A48642E77CF3B0072BE81 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 0B5A48632E77CF3B0072BE81 /* RealmSwift */; };
 		0B5A48672E7804A10072BE81 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 0B5A48632E77CF3B0072BE81 /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		0B5149582EC56D0E00FA0595 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0B90337A2E3E05DE0052F7B2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0B5149432EC56D0C00FA0595;
+			remoteInfo = BeepTimerWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
+		0B51495F2EC56D0E00FA0595 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0B51495A2EC56D0E00FA0595 /* BeepTimerWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0B5A48682E7804A10072BE81 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -26,18 +50,75 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0B5149442EC56D0C00FA0595 /* BeepTimerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BeepTimerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B5149462EC56D0C00FA0595 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		0B5149482EC56D0C00FA0595 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		0B9033822E3E05DE0052F7B2 /* BeepTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BeepTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0B51495B2EC56D0E00FA0595 /* Exceptions for "BeepTimerWidget" folder in "BeepTimerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */;
+		};
+		0B5149692EC5747B00FA0595 /* Exceptions for "BeepTimerWidget" folder in "BeepTimer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				BeepTimerWidgetAttributes.swift,
+			);
+			target = 0B9033812E3E05DE0052F7B2 /* BeepTimer */;
+		};
+		0B51496B2EC5770C00FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0B9033812E3E05DE0052F7B2 /* BeepTimer */;
+		};
+		0B51496D2EC5A6D500FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+				UIManager.swift,
+			);
+			target = 0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0B51494A2EC56D0C00FA0595 /* BeepTimerWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0B5149692EC5747B00FA0595 /* Exceptions for "BeepTimerWidget" folder in "BeepTimer" target */,
+				0B51495B2EC56D0E00FA0595 /* Exceptions for "BeepTimerWidget" folder in "BeepTimerWidgetExtension" target */,
+			);
+			path = BeepTimerWidget;
+			sourceTree = "<group>";
+		};
 		0B9033842E3E05DE0052F7B2 /* BeepTimer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0B51496B2EC5770C00FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimer" target */,
+				0B51496D2EC5A6D500FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimerWidgetExtension" target */,
+			);
 			path = BeepTimer;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0B5149412EC56D0C00FA0595 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B5149492EC56D0C00FA0595 /* SwiftUI.framework in Frameworks */,
+				0B5149472EC56D0C00FA0595 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0B90337F2E3E05DE0052F7B2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -49,10 +130,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0B5149452EC56D0C00FA0595 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0B5149462EC56D0C00FA0595 /* WidgetKit.framework */,
+				0B5149482EC56D0C00FA0595 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		0B9033792E3E05DE0052F7B2 = {
 			isa = PBXGroup;
 			children = (
 				0B9033842E3E05DE0052F7B2 /* BeepTimer */,
+				0B51494A2EC56D0C00FA0595 /* BeepTimerWidget */,
+				0B5149452EC56D0C00FA0595 /* Frameworks */,
 				0B9033832E3E05DE0052F7B2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -61,6 +153,7 @@
 			isa = PBXGroup;
 			children = (
 				0B9033822E3E05DE0052F7B2 /* BeepTimer.app */,
+				0B5149442EC56D0C00FA0595 /* BeepTimerWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -68,6 +161,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B51495C2EC56D0E00FA0595 /* Build configuration list for PBXNativeTarget "BeepTimerWidgetExtension" */;
+			buildPhases = (
+				0B5149402EC56D0C00FA0595 /* Sources */,
+				0B5149412EC56D0C00FA0595 /* Frameworks */,
+				0B5149422EC56D0C00FA0595 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0B51494A2EC56D0C00FA0595 /* BeepTimerWidget */,
+			);
+			name = BeepTimerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = BeepTimerWidgetExtension;
+			productReference = 0B5149442EC56D0C00FA0595 /* BeepTimerWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		0B9033812E3E05DE0052F7B2 /* BeepTimer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0B90338D2E3E05E00052F7B2 /* Build configuration list for PBXNativeTarget "BeepTimer" */;
@@ -76,10 +191,12 @@
 				0B90337F2E3E05DE0052F7B2 /* Frameworks */,
 				0B9033802E3E05DE0052F7B2 /* Resources */,
 				0B5A48682E7804A10072BE81 /* Embed Frameworks */,
+				0B51495F2EC56D0E00FA0595 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				0B5149592EC56D0E00FA0595 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0B9033842E3E05DE0052F7B2 /* BeepTimer */,
@@ -102,6 +219,9 @@
 				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
+					0B5149432EC56D0C00FA0595 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 					0B9033812E3E05DE0052F7B2 = {
 						CreatedOnToolsVersion = 16.4;
 					};
@@ -125,11 +245,19 @@
 			projectRoot = "";
 			targets = (
 				0B9033812E3E05DE0052F7B2 /* BeepTimer */,
+				0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0B5149422EC56D0C00FA0595 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0B9033802E3E05DE0052F7B2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -140,6 +268,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0B5149402EC56D0C00FA0595 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		0B90337E2E3E05DE0052F7B2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -149,7 +284,69 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		0B5149592EC56D0E00FA0595 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */;
+			targetProxy = 0B5149582EC56D0E00FA0595 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		0B51495D2EC56D0E00FA0595 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BeepTimerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BeepTimerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.LimJH.BeepTimer.BeepTimerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0B51495E2EC56D0E00FA0595 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BeepTimerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = BeepTimerWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.LimJH.BeepTimer.BeepTimerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		0B90338B2E3E05E00052F7B2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -281,6 +478,8 @@
 				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BeepTimer/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -310,6 +509,8 @@
 				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BeepTimer/Info.plist;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -332,6 +533,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0B51495C2EC56D0E00FA0595 /* Build configuration list for PBXNativeTarget "BeepTimerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B51495D2EC56D0E00FA0595 /* Debug */,
+				0B51495E2EC56D0E00FA0595 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		0B90337D2E3E05DE0052F7B2 /* Build configuration list for PBXProject "BeepTimer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

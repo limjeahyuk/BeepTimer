@@ -6,6 +6,13 @@
 //
 
 import SwiftUI
+import ActivityKit
+
+enum TimerPhaseState {
+    case running
+    case paused
+    case done
+}
 
 class TimerController: ObservableObject {
     // 현재 돌고 있는 시간 ( Time / Rest )
@@ -33,9 +40,15 @@ class TimerController: ObservableObject {
     @Published private(set) var setIndex: Int = 1
     @Published private(set) var state: State = .idle
     
+    // 포그라운드 / 백그라운드 상태
+    @Published var isInBackground: Bool = false
+    
     var onStart: (() -> Void)?
     var onEnded: (() -> Void)?
     var onPhaseChanged: ((Phase, Int) -> Void)?
+    
+    // Dynamic
+    var liveActivity: Activity<BeepTimerWidgetAttributes>?
     
     // phase에 맞춰서 설정되어있는 time
     func currentTotal() -> TimeInterval {
@@ -66,9 +79,7 @@ class TimerController: ObservableObject {
     // 일시정지 : 남은 시간 저장
     func pause() {
         // running 일 때만 해당 함수 사용 가능.
-        guard case .running(_, let end) = state else {
-            return
-        }
+        guard case .running(_, let end) = state else { return }
         // remaining 값 구하기 : 무조건 0 보다 높고 현재 Date와 end의 간격
         // timeIntervalSince : Date() - end
         let rem = max(0, end.timeIntervalSince(Date()))
@@ -80,12 +91,17 @@ class TimerController: ObservableObject {
         let now = Date()
         // state 변경. running (지금 시간 부터 지금으로부터 남은 시간.)
         state = .running(start: now, end: now.addingTimeInterval(rem))
+        
+        // Live Activity 업데이트 (현재 phase 유지, endTime 갱신)
+//        Task { await updateLiveActivityRunning(end: now.addingTimeInterval(rem)) }
     }
     
     // 멈추기
     func stop() {
         state = .idle
         phase = .time
+        // Live Activity 종료
+        Task { await endLiveActivity(immediate: true) }
     }
     
     // 현재 시각 기준 남은 시간 / 진행률
@@ -106,7 +122,7 @@ class TimerController: ObservableObject {
     func progress(at now: Date) -> CGFloat {
         let total = max(0.001, currentTotal())
         let rem = remaining(at: now)
-        guard timeSec > 0 else { return 0}
+        guard timeSec > 0 else { return 0 }
         return CGFloat(rem / total)
     }
     
@@ -128,18 +144,52 @@ class TimerController: ObservableObject {
         }
     }
     
+    func displayRemaining(at now: Date) -> Int {
+        Int(ceil(remaining(at: now)))
+    }
+    
     // Time Lozic
     func startPhase(_ duration: TimeInterval) {
         let now = Date()
         // state 변경 및 시간 저장 / start & end
         state = .running(start: now, end: now.addingTimeInterval(duration))
-        logger.d("startPhase \(phase) \(setIndex)")
         onPhaseChanged?(phase, setIndex)
     }
     
-    // 끝났을때
-    // 추후에 Time 다음이 Rest가 아닌건 여기서 작업.
+    // 핵심 로직. / 타이머 하나 끝날때 호출
     func advancePhase() {
+        // 포그라운드 / 백그라운드에 따라 다른 행동.
+        if isInBackground {
+            handleBackgroundPhaseChange()
+            return
+        }
+        
+        handleForegroundPhaseChange()
+    }
+    
+    // 백그라운드
+    func handleBackgroundPhaseChange(){
+        if phase == .time {
+            phase = .rest
+            state = .paused(remainig: restSec)
+        } else { // rest
+            if setIndex < totalSets {
+                setIndex += 1
+                phase = .time
+                state = .paused(remainig: timeSec)
+            } else {
+                state = .idle
+                phase = .time
+                onEnded?()
+            }
+        }
+
+        // Live Activity → 0초 + 체크로 고정
+        Task { await markLiveActivityDone() }
+    }
+    
+    // 포그라운드
+    func handleForegroundPhaseChange(){
         if phase == .time {
             phase = .rest
             switch SettingManager.shared.autoMode {
@@ -168,7 +218,6 @@ class TimerController: ObservableObject {
                 phase = .time
                 stop()
                 onEnded?()
-                
             }
         }
     }
@@ -239,4 +288,105 @@ class TimerController: ObservableObject {
         return cfg
     }
     
+}
+
+extension TimerController {
+    
+    // scenePhase가 background로 갈 때 호출
+    func syncLiveActivityForCurrentState() async {
+        guard #available(iOS 16.1, *) else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+
+        switch state {
+        case .running(_, let end):
+            if liveActivity == nil {
+                await startLiveActivity(end: end)
+            } else {
+                await updateLiveActivityRunning(end: end)
+            }
+
+        case .paused(let remain):
+            await updateLiveActivityPaused(remain: remain)
+
+        case .idle:
+            await endLiveActivity(immediate: true)
+        }
+    }
+
+    
+    private func startLiveActivity(end: Date) async {
+        guard #available(iOS 16.1, *) else { return }
+
+        let attr = BeepTimerWidgetAttributes(title: timerTitle)
+        let state = makeState(end: end, remain: nil)
+
+        do {
+            liveActivity = try Activity.request(
+                attributes: attr,
+                contentState: state,
+                pushType: nil
+            )
+        } catch {
+            print("LiveActivity request error: \(error)")
+        }
+    }
+
+    private func updateLiveActivityRunning(end: Date) async {
+        guard let liveActivity else { return }
+        await liveActivity.update(using: makeState(end: end, remain: nil))
+    }
+
+    private func updateLiveActivityPaused(remain: TimeInterval) async {
+        guard let liveActivity else { return }
+        await liveActivity.update(using: makeState(end: Date(), remain: remain))
+    }
+
+    private func makeState(end: Date, remain: TimeInterval?) -> BeepTimerWidgetAttributes.ContentState {
+        BeepTimerWidgetAttributes.ContentState(
+            phase: phaseString(),
+            status: remain == 0 ? "done" : (state == .paused(remainig: 0) ? "done" : "running"),
+            endTime: end,
+            remainSec: remain != nil ? Int(ceil(remain!)) : nil,
+            setIndex: setIndex,
+            totalSets: totalSets
+        )
+    }
+
+    private func phaseString() -> String {
+        return phase == .rest ? "rest" : "time"
+    }
+
+    fileprivate func markLiveActivityDone() async {
+        guard let liveActivity else { return }
+
+        let state = BeepTimerWidgetAttributes.ContentState(
+            phase: phaseString(),
+            status: "done",
+            endTime: Date(),
+            remainSec: 0,
+            setIndex: setIndex,
+            totalSets: totalSets
+        )
+
+        await liveActivity.update(using: state)
+    }
+
+    fileprivate func endLiveActivity(immediate: Bool) async {
+        guard let liveActivity else { return }
+        await liveActivity.end(dismissalPolicy: immediate ? .immediate : .default)
+        self.liveActivity = nil
+    }
+}
+
+extension TimerController {
+    var phaseStatusForUI: TimerPhaseState {
+        switch state {
+        case .running(_, _):
+            return .running
+        case .paused(let rem):
+            return rem <= 0 ? .done : .paused
+        case .idle:
+            return .paused
+        }
+    }
 }

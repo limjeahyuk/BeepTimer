@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TimerPager: View {
     @StateObject private var controller = TimerController()
+    @Environment(\.scenePhase) var scenePhase
 
     @State private var page = 0
 
@@ -50,6 +51,23 @@ struct TimerPager: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .background(Color(hex: "#1A1E24").ignoresSafeArea())
+        .onChange(of: scenePhase) { newValue in
+            switch newValue {
+            case .background:
+                // 백그라운드로 갈 때 현재 상태 기준으로 Live Activity 동기화
+                logger.d("background scene phase")
+                controller.isInBackground = true
+                Task { await controller.syncLiveActivityForCurrentState() }
+            case .active:
+                // 다시 앱으로 돌아오면 Live Activity는 유지해도 되고,
+                // 원하면 끝내도 됨
+                logger.d("active ground scene ")
+                controller.isInBackground = false
+                break
+            default:
+                break
+            }
+        }
     }
 }
 

@@ -1,17 +1,15 @@
 {
   "images" : [
     {
-      "filename" : "timer.svg",
+      "filename" : "widgetTimer.svg",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "timer 1.svg",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "timer 2.svg",
       "idiom" : "universal",
       "scale" : "3x"
     }
