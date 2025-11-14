@@ -69,8 +69,16 @@ class TimerController: ObservableObject {
         case .idle:
             setIndex = 1
             startPhase(timeSec)
+            
+            Task {
+                await ensureLiveActivityCreated()
+            }
         case .paused(let rem):
             resume(rem)
+            
+            Task {
+                await ensureLiveActivityCreated()
+            }
         case .running:
             break
         }
@@ -294,17 +302,16 @@ extension TimerController {
     
     // scenePhase가 background로 갈 때 호출
     func syncLiveActivityForCurrentState() async {
+        logger.d("syncLiveActivityForCurrentState called")
         guard #available(iOS 16.1, *) else { return }
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
+        logger.d("syncLiveActivityForCurrentState called \(state)")
+        
         switch state {
         case .running(_, let end):
-            if liveActivity == nil {
-                await startLiveActivity(end: end)
-            } else {
-                await updateLiveActivityRunning(end: end)
-            }
-
+            await updateLiveActivityRunning(end: end)
+    
         case .paused(let remain):
             await updateLiveActivityPaused(remain: remain)
 
@@ -312,7 +319,36 @@ extension TimerController {
             await endLiveActivity(immediate: true)
         }
     }
+    
+    @available(iOS 16.1, *)
+    func ensureLiveActivityCreated() async {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
+        // 이미 LiveActivity 살아있으면 반환
+        if let liveActivity,
+           liveActivity.activityState == .active || liveActivity.activityState == .stale {
+            return
+        }
+
+        // 여기서 한 번만 생성!
+        await startLiveActivityFromCurrentState()
+    }
+    
+    @available(iOS 16.1, *)
+    func startLiveActivityFromCurrentState() async {
+        logger.d("start Live Activity 생성")
+        switch state {
+        case .running(_, let end):
+            await startLiveActivity(end: end)
+
+        case .paused(let remain):
+            let end = Date().addingTimeInterval(remain)
+            await startLiveActivity(end: end)
+
+        case .idle:
+            break
+        }
+    }
     
     private func startLiveActivity(end: Date) async {
         guard #available(iOS 16.1, *) else { return }
@@ -342,9 +378,22 @@ extension TimerController {
     }
 
     private func makeState(end: Date, remain: TimeInterval?) -> BeepTimerWidgetAttributes.ContentState {
-        BeepTimerWidgetAttributes.ContentState(
+        let statusString: String = {
+            if let remain = remain, remain <= 0 {
+                return "done"
+            }
+            
+            if case .paused = state {
+                return "paused"
+            }
+            
+            return "running"
+        }()
+        
+        logger.d("make State \(state)")
+        return BeepTimerWidgetAttributes.ContentState(
             phase: phaseString(),
-            status: remain == 0 ? "done" : (state == .paused(remainig: 0) ? "done" : "running"),
+            status: statusString,
             endTime: end,
             remainSec: remain != nil ? Int(ceil(remain!)) : nil,
             setIndex: setIndex,
