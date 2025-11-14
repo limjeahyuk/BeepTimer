@@ -407,6 +407,8 @@ extension TimerController {
 
     fileprivate func markLiveActivityDone() async {
         guard let liveActivity else { return }
+        
+        logger.d("liveActivity Done \(phaseString())")
 
         let state = BeepTimerWidgetAttributes.ContentState(
             phase: phaseString(),

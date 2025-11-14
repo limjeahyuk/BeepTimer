@@ -15,6 +15,7 @@ enum TimerPhaseStatus: String, Codable { case running; case paused; case done}
 struct TimerPhaseRingIcon: View {
     let mode: TimerPhaseMode      // .time / .rest
     let status: TimerPhaseStatus  // .running / .paused / .done
+    let isAllDone: Bool
 
     var body: some View {
         ZStack {
@@ -39,9 +40,13 @@ struct TimerPhaseRingIcon: View {
     
     // done 되자마자 mode가 변경되어버려서 다음 링 색상이 되어버립니다.
     private var doneColor: Color {
-        switch mode {
-        case .time: return TimerColor.ringRest
-        case .rest: return TimerColor.ringTime
+        if isAllDone {
+            return .red
+        }else {
+            switch mode {
+            case .time: return TimerColor.ringRest
+            case .rest: return TimerColor.ringTime
+            }
         }
     }
 
@@ -53,13 +58,14 @@ struct TimerPhaseRingIcon: View {
         case .running:
             switch mode {
             case .time:
-                Image("widgetTimer")
-                    .renderingMode(.template)
-                    .resizable()
-                    .frame(width: 23, height: 23)
-                    .foregroundColor(.white)
+//                Image("widgetTimer")
+//                    .renderingMode(.template)
+//                    .resizable()
+//                    .frame(width: 23, height: 23)
+//                    .foregroundColor(.white)
+                Image(systemName: "figure.run")
             case .rest:
-                Image(systemName: "leaf.fill")
+                Image(systemName: "figure.mind.and.body")
             }
         case .done:
             Image(systemName: "checkmark")
@@ -90,70 +96,127 @@ struct BeepTimerWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: BeepTimerWidgetAttributes.self) { context in
             // 잠금화면(확장) 뷰
-            HStack {
-                if context.state.phase == "done" {
-                    Image(systemName: "checkmark.circle.fill")
-                } else {
-                    Text(context.state.endTime, style: .timer)
-                        .font(.title3)
-                        .monospacedDigit()
-                }
-                Spacer()
-            }
-            .padding()
+            let (mode, status) = self.modeAndStatus(from: context.state)
+           let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
+
+           HStack(spacing: 8) {
+               TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+
+               if status == .done {
+                   VStack(alignment: .leading, spacing: 2) {
+                       Text(context.attributes.title)
+                           .font(.headline)
+                       Text("DONE")
+                           .font(.subheadline)
+                           .foregroundColor(.secondary)
+                   }
+               } else {
+                   VStack(alignment: .leading, spacing: 2) {
+                       Text(context.attributes.title)
+                           .font(.headline)
+
+                       Text(context.state.endTime, style: .timer)
+                           .font(.title3)
+                           .monospacedDigit()
+                   }
+               }
+
+               Spacer()
+
+               Text("\(context.state.setIndex)/\(context.state.totalSets)")
+                   .font(.subheadline)
+           }
+           .padding(.horizontal, 16)
+           .padding(.vertical, 10)
         } dynamicIsland: { context in
-            DynamicIsland {
+            let (mode, status) = self.modeAndStatus(from: context.state)
+            let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
+
+            return DynamicIsland {
+                // 확장 - 왼쪽 (아이콘 + 세트)
+                DynamicIslandExpandedRegion(.leading) {
+                    HStack(spacing: 6) {
+                        TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(context.state.setIndex)/\(context.state.totalSets)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+
+                            Text(mode == .time ? "Time" : "Rest")
+                                .font(.caption2)
+                        }
+                    }
+                }
+
+                // 확장 - 가운데 (큰 타이머 or 체크)
                 DynamicIslandExpandedRegion(.center) {
-                    if context.state.phase == "done" {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.largeTitle)
+                    if status == .done {
+                        VStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 36))
+                            Text("DONE")
+                                .font(.headline)
+                        }
                     } else {
                         Text(context.state.endTime, style: .timer)
-                            .font(.largeTitle)
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
                             .monospacedDigit()
+                    }
+                }
+
+                // 확장 - 아래 (재생 / 다음 버튼 예시)
+                DynamicIslandExpandedRegion(.bottom) {
+                    HStack(spacing: 12) {
+                        // 재생 / 일시정지 토글용 딥링크 (예시)
+                        Link(destination: URL(string: "beeptimer://action=toggle")!) {
+                            Label(
+                                status == .running ? "일시정지" : "재생",
+                                systemImage: status == .running ? "pause.fill" : "play.fill"
+                            )
+                            .font(.caption)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.white.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+
+                        // 다음 세트로 건너뛰기 딥링크 (예시)
+                        Link(destination: URL(string: "beeptimer://action=next")!) {
+                            Label("다음 세트", systemImage: "forward.fill")
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.white.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
                     }
                 }
 
             } compactLeading: {
-                let (mode, status) = self.modeAndStatus(from: context.state)
-                
-                TimerPhaseRingIcon(mode: mode, status: status)
-            } compactTrailing: {
-                if context.state.phase == "done" {
-                    Image(systemName: "checkmark.circle")
-                                .font(.caption2)
-                                .foregroundColor(.white)
-                } else if context.state.phase == "paused" {
-                    HStack(spacing: 2) {
-                        Image("widgetTimer")
-                            .renderingMode(.template)        // Template 로 색 입히기
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 10, height: 10)
-                            .foregroundColor(.white)
+                // compact 왼쪽: minimal과 동일 아이콘
+                TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
 
-                        Text("\(context.state.remainSec ?? 0)")
-                            .monospacedDigit()
-                            .font(.caption2)
-                    }
+            } compactTrailing: {
+                // compact 오른쪽: 세트/타이머 or DONE
+                if status == .done {
+                    Text("DONE")
+                        .font(.caption2)
+                        .bold()
                 } else {
                     HStack(spacing: 2) {
-                        Image("widgetTimer")
-                            .renderingMode(.template)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 10, height: 10)
-                            .foregroundColor(.white)
+                        Text("\(context.state.setIndex)/\(context.state.totalSets)")
+                            .font(.caption2)
 
                         Text(context.state.endTime, style: .timer)
                             .monospacedDigit()
                             .font(.caption2)
                     }
                 }
+
             } minimal: {
-                let (mode, status) = self.modeAndStatus(from: context.state)
-                
-                TimerPhaseRingIcon(mode: mode, status: status)
+                //최소: 아이콘만
+                TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
             }
         }
     }
