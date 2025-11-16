@@ -74,6 +74,7 @@ struct TimerPhaseRingIcon: View {
 }
 
 struct BeepTimerWidgetLiveActivity: Widget {
+    
     func modeAndStatus(
             from state: BeepTimerWidgetAttributes.ContentState
         ) -> (TimerPhaseMode, TimerPhaseStatus) {
@@ -97,40 +98,42 @@ struct BeepTimerWidgetLiveActivity: Widget {
         ActivityConfiguration(for: BeepTimerWidgetAttributes.self) { context in
             // 잠금화면(확장) 뷰
             let (mode, status) = self.modeAndStatus(from: context.state)
-           let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
+            let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
 
-           HStack(spacing: 8) {
-               TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+               HStack(spacing: 8) {
+                   TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
 
-               if status == .done {
-                   VStack(alignment: .leading, spacing: 2) {
-                       Text(context.attributes.title)
-                           .font(.headline)
-                       Text("DONE")
-                           .font(.subheadline)
-                           .foregroundColor(.secondary)
+                   if status == .done {
+                       VStack(alignment: .leading, spacing: 2) {
+                           Text(context.attributes.title)
+                               .font(.headline)
+                           Text("DONE")
+                               .font(.subheadline)
+                               .foregroundColor(.secondary)
+                       }
+                   } else {
+                       VStack(alignment: .leading, spacing: 2) {
+                           Text(context.attributes.title)
+                               .font(.headline)
+
+                           Text(context.state.endTime, style: .timer)
+                               .font(.title3)
+                               .monospacedDigit()
+                       }
                    }
-               } else {
-                   VStack(alignment: .leading, spacing: 2) {
-                       Text(context.attributes.title)
-                           .font(.headline)
 
-                       Text(context.state.endTime, style: .timer)
-                           .font(.title3)
-                           .monospacedDigit()
-                   }
+                   Spacer()
+
+                   Text("\(context.state.setIndex)/\(context.state.totalSets)")
+                       .font(.subheadline)
                }
-
-               Spacer()
-
-               Text("\(context.state.setIndex)/\(context.state.totalSets)")
-                   .font(.subheadline)
-           }
-           .padding(.horizontal, 16)
-           .padding(.vertical, 10)
+               .padding(.horizontal, 16)
+               .padding(.vertical, 10)
         } dynamicIsland: { context in
             let (mode, status) = self.modeAndStatus(from: context.state)
             let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
+            let runningRemain = max(0, Int(context.state.endTime.timeIntervalSince(Date())))
+
 
             return DynamicIsland {
                 // 확장 - 왼쪽 (아이콘 + 세트)
@@ -195,24 +198,14 @@ struct BeepTimerWidgetLiveActivity: Widget {
 
             } compactLeading: {
                 // compact 왼쪽: minimal과 동일 아이콘
-                TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
-
+                
             } compactTrailing: {
                 // compact 오른쪽: 세트/타이머 or DONE
-                if status == .done {
-                    Text("DONE")
-                        .font(.caption2)
-                        .bold()
-                } else {
-                    HStack(spacing: 2) {
-                        Text("\(context.state.setIndex)/\(context.state.totalSets)")
-                            .font(.caption2)
-
-                        Text(context.state.endTime, style: .timer)
-                            .monospacedDigit()
-                            .font(.caption2)
-                    }
-                }
+                
+                Text(context.state.endTime, style: .timer)
+                    .frame(width: 50)
+                    .font(.caption2)
+                    .monospacedDigit()
 
             } minimal: {
                 //최소: 아이콘만
