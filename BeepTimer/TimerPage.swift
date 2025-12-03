@@ -12,6 +12,8 @@ struct TimerPager: View {
     @Environment(\.scenePhase) var scenePhase
 
     @State private var page = 0
+    
+    
 
     var body: some View {
         TabView(selection: $page) {
@@ -51,6 +53,7 @@ struct TimerPager: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .background(Color(hex: "#1A1E24").ignoresSafeArea())
+        .ignoresSafeArea(.keyboard)
         .onChange(of: scenePhase) { newValue in
             switch newValue {
             case .background:
@@ -68,6 +71,19 @@ struct TimerPager: View {
                 break
             }
         }
+//        .onChange(of: page) { _ in
+//            // 👉 페이지 바뀔 때마다 무조건 키보드 내리기
+//            hideKeyboard()
+//        }
     }
 }
 
+
+extension View {
+    func hideKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil, from: nil, for: nil
+        )
+    }
+}
