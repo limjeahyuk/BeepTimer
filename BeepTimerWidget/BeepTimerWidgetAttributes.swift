@@ -11,8 +11,10 @@ import SwiftUI
 
 public struct BeepTimerWidgetAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
-        public var phase: String /// "time" | "rest" |
-        public var status: String /// "running" | "paused" | "done"
+        /// "time" | "rest" |
+        public var phase: String
+        /// "running" | "paused" | "done"
+        public var status: String
         /// 카운트다운용 종료시각 (running일 때만 의미 있음)
         public var endTime: Date
         /// 일시정지 시 표시용 남은 초(옵션)

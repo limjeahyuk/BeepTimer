@@ -106,6 +106,7 @@ struct TimerLibraryView: View {
                             ForEach(sorted, id: \._id) { p in
                                 ProgramRowCard(program: p,
                                                onStart: {
+                                                    hideKeyboard()
                                                     ActiveProgramStore.setActive(p)
                                                     onPick(p.toModel())
                                                 },

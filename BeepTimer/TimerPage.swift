@@ -13,14 +13,16 @@ struct TimerPager: View {
 
     @State private var page = 0
     
-    
-
     var body: some View {
         TabView(selection: $page) {
             // 0: 메인 타이머
             ContentView()
                 .environmentObject(controller)
                 .tag(0)
+                .onTapGesture {
+                    hideKeyboard()
+                    logger.d("hideKeyBoard")
+                }
 
             // 1: 라이브러리
             NavigationStack {
@@ -71,10 +73,10 @@ struct TimerPager: View {
                 break
             }
         }
-//        .onChange(of: page) { _ in
-//            // 👉 페이지 바뀔 때마다 무조건 키보드 내리기
-//            hideKeyboard()
-//        }
+        .onChange(of: page) { newValue in
+            logger.d("페이지 변경 \(newValue)")
+            hideKeyboard()
+        }
     }
 }
 

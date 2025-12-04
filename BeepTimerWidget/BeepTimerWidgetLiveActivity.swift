@@ -199,14 +199,32 @@ struct BeepTimerWidgetLiveActivity: Widget {
             } compactLeading: {
                 // compact 왼쪽: minimal과 동일 아이콘
                 
+                TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+                
+                
             } compactTrailing: {
                 // compact 오른쪽: 세트/타이머 or DONE
-                
-                Text(context.state.endTime, style: .timer)
-                    .frame(width: 50)
-                    .font(.caption2)
-                    .monospacedDigit()
-
+                let current = context.state.setIndex
+                let totalSets = context.state.totalSets
+                VStack(alignment: .center, spacing: 0){
+                    Text("\(current)/\(totalSets)")
+                        .font(.system(size: 10))
+                    
+                    switch context.state.status {
+                    case "running":
+                        Text(context.state.endTime, style: .timer)
+                            .background(Color.gray)
+                    case "paused":
+                        Text("Paused")
+                    case "done":
+                        Text("Done")
+                    default:
+                        Text("Error")
+                    }
+                }
+                .frame(width: 50, alignment: .center)
+                .font(.system(size: 12))
+                .monospaced()
             } minimal: {
                 //최소: 아이콘만
                 TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
