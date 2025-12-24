@@ -60,29 +60,29 @@
 		0B51495B2EC56D0E00FA0595 /* Exceptions for "BeepTimerWidget" folder in "BeepTimerWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
+				Resources/Info.plist,
 			);
 			target = 0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */;
 		};
 		0B5149692EC5747B00FA0595 /* Exceptions for "BeepTimerWidget" folder in "BeepTimer" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				BeepTimerWidgetAttributes.swift,
+				LiveActivity/BeepTimerWidgetAttributes.swift,
 			);
 			target = 0B9033812E3E05DE0052F7B2 /* BeepTimer */;
 		};
 		0B51496B2EC5770C00FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimer" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
+				Resources/Info.plist,
 			);
 			target = 0B9033812E3E05DE0052F7B2 /* BeepTimer */;
 		};
 		0B51496D2EC5A6D500FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimerWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Assets.xcassets,
-				UIManager.swift,
+				Resources/Assets.xcassets,
+				Services/UI/UIManager.swift,
 			);
 			target = 0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */;
 		};
@@ -302,7 +302,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BeepTimerWidget/Info.plist;
+				INFOPLIST_FILE = BeepTimerWidget/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = BeepTimerWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -329,7 +329,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BeepTimerWidget/Info.plist;
+				INFOPLIST_FILE = BeepTimerWidget/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = BeepTimerWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -478,7 +478,7 @@
 				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BeepTimer/Info.plist;
+				INFOPLIST_FILE = BeepTimer/Resources/Info.plist;
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -509,7 +509,7 @@
 				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = BeepTimer/Info.plist;
+				INFOPLIST_FILE = BeepTimer/Resources/Info.plist;
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
