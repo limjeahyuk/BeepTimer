@@ -80,9 +80,9 @@ extension ConfigurationAppIntent {
     }
 }
 
-#Preview(as: .systemSmall) {
-    BeepTimerWidget()
-} timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
-}
+//#Preview(as: .systemSmall) {
+//    BeepTimerWidget()
+//} timeline: {
+//    SimpleEntry(date: .now, configuration: .smiley)
+//    SimpleEntry(date: .now, configuration: .starEyes)
+//}

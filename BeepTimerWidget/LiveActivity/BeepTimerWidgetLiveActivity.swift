@@ -17,6 +17,7 @@ struct TimerPhaseRingIcon: View {
     let status: TimerPhaseStatus  // .running / .paused / .done
     let isAllDone: Bool
 
+
     var body: some View {
         ZStack {
             IconImage
@@ -58,11 +59,6 @@ struct TimerPhaseRingIcon: View {
         case .running:
             switch mode {
             case .time:
-//                Image("widgetTimer")
-//                    .renderingMode(.template)
-//                    .resizable()
-//                    .frame(width: 23, height: 23)
-//                    .foregroundColor(.white)
                 Image(systemName: "figure.run")
             case .rest:
                 Image(systemName: "figure.mind.and.body")
@@ -93,6 +89,7 @@ struct BeepTimerWidgetLiveActivity: Widget {
 
             return (mode, status)
         }
+
     
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: BeepTimerWidgetAttributes.self) { context in
@@ -102,23 +99,26 @@ struct BeepTimerWidgetLiveActivity: Widget {
 
                HStack(spacing: 8) {
                    TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+                   
+                   VStack(alignment: .leading, spacing: 2) {
+                       Text(context.attributes.title)
+                           .font(.headline)
 
-                   if status == .done {
-                       VStack(alignment: .leading, spacing: 2) {
-                           Text(context.attributes.title)
-                               .font(.headline)
+                       if status == .done {
                            Text("DONE")
                                .font(.subheadline)
                                .foregroundColor(.secondary)
-                       }
-                   } else {
-                       VStack(alignment: .leading, spacing: 2) {
-                           Text(context.attributes.title)
-                               .font(.headline)
-
+                           
+                       } else if status == .running {
                            Text(context.state.endTime, style: .timer)
                                .font(.title3)
                                .monospacedDigit()
+                       } else {
+                           
+                           Text("Paused")
+                               .font(.title3)
+                               .monospacedDigit()
+                               .foregroundColor(.secondary)
                        }
                    }
 

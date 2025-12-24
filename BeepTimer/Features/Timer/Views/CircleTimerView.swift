@@ -98,6 +98,11 @@ struct CircleTimerView: View {
                 
             }
             .onChange(of: p) { _ in controller.tryFireEndIfNeeded() }
+            .onChange(of: remaining) { newRemaining in
+                if let end = controller.currentEndTime {
+                    controller.handleBeepIfNeeded(displayRemaining: newRemaining, endTime: end)
+                }
+            }
             .padding(12)
         }
         .frame(maxWidth: .infinity)

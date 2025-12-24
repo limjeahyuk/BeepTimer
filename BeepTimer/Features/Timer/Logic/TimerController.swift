@@ -50,6 +50,15 @@ class TimerController: ObservableObject {
     // Dynamic
     var liveActivity: Activity<BeepTimerWidgetAttributes>?
     
+    private var beeped: Set<Int> = []   // 3,2,1 중복 방지
+    private var didEndBeep = false      // 0초(끝) 중복 방지
+    private var lastBeepEndTime: Date? = nil
+    
+    var currentEndTime: Date? {
+        if case .running(_, let end) = state { return end }
+        return nil
+    }
+    
     // phase에 맞춰서 설정되어있는 time
     func currentTotal() -> TimeInterval {
         phase == .time ? timeSec : restSec
@@ -158,6 +167,9 @@ class TimerController: ObservableObject {
     
     // Time Lozic
     func startPhase(_ duration: TimeInterval) {
+        beeped.removeAll()
+        didEndBeep = false
+        
         let now = Date()
         // state 변경 및 시간 저장 / start & end
         state = .running(start: now, end: now.addingTimeInterval(duration))
@@ -229,6 +241,45 @@ class TimerController: ObservableObject {
             }
         }
     }
+    
+    func handleBeepIfNeeded(displayRemaining: Int, endTime: Date) {
+        // running일 때만
+        guard case .running = state else { return }
+        
+        if lastBeepEndTime != endTime {
+            lastBeepEndTime = endTime
+            beeped.removeAll()
+            didEndBeep = false
+        }
+        
+        
+        // 같은 초에서 중복 방지
+        guard beeped.contains(displayRemaining) == false else { return }
+        beeped.insert(displayRemaining)
+
+        switch displayRemaining {
+        case 3, 2, 1:
+            FeedbackService.shared.countdownTick()    //  1초도 여기 포함
+        case 0:
+            FeedbackService.shared.phaseEndDouble()     //  0초는 긴 거
+        default:
+            break
+        }
+
+//        // 3,2,1에서 각각 1번
+//        if (1...3).contains(displayRemaining),
+//           beeped.contains(displayRemaining) == false {
+//            beeped.insert(displayRemaining)
+//            FeedbackService.shared.countdownTick()
+//        }
+//
+//        // 0에서 "삐삐~" 1번
+//        if displayRemaining == 0, didEndBeep == false {
+//            didEndBeep = true
+//            FeedbackService.shared.phaseEndDouble()
+//        }
+    }
+
     
     func goToSet(_ target: Int) -> Bool {
         let clamped = max(1, min(totalSets, target))
