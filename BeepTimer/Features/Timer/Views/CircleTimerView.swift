@@ -35,7 +35,7 @@ struct CircleTimerView: View {
     var body: some View {
         TimelineView(.animation) { ctx in
             let now = ctx.date
-            let remaining = controller.displayRemaing(at: now)
+            let remaining = controller.displayRemaining(at: now)
 
             // p: 남은 비율(1→0). fill: 채워진 비율(0→1)
             let p = controller.progress(at: now)
@@ -110,18 +110,7 @@ struct CircleTimerView: View {
         .contentShape(Circle()) // 원 전체 클릭 되도록
         .onTapGesture {
             logger.d("circle Clickeds")
-            togglePlay()
-        }
-    }
-    
-    private func togglePlay() {
-        switch controller.state {
-        case .running:
-            controller.pause()
-        case .paused(let rem):
-            controller.resume(rem)
-        case .idle:
-            controller.start()
+            controller.toggle()
         }
     }
 }

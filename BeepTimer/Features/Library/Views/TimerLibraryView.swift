@@ -59,7 +59,7 @@ struct TimerLibraryView: View {
                         obj.title = title
                         obj.createdAt = Date()
                         
-                        let steps = List<RStep>()
+                        let steps = RealmSwift.List<RStep>()
                         let t = RStep(); t.kindRaw = "time"; t.seconds = 30   // 기본 Time
                         let r = RStep(); r.kindRaw = "rest"; r.seconds = 15   // 기본 Rest
                         steps.append(objectsIn: [t, r])

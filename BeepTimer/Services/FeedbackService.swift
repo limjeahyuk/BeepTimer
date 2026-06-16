@@ -43,16 +43,6 @@ final class FeedbackService {
     }
 
     /// 페이즈 끝(0초) 긴 소리 + 진동
-    func phaseEnd() {
-        configureIfNeeded()
-
-        // 조금 더 긴 느낌의 시스템 사운드 (원하면 다른 ID로 교체 가능)
-        AudioServicesPlaySystemSound(1013)
-
-        // 진동도 한 번
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
-    }
-    
     func phaseEndDouble() {
         configureIfNeeded()
         AudioServicesPlaySystemSound(1013)

@@ -59,16 +59,16 @@ struct TimerPager: View {
         .onChange(of: scenePhase) { newValue in
             switch newValue {
             case .background:
-                // 백그라운드로 갈 때 현재 상태 기준으로 Live Activity 동기화
+                // 백그라운드로 갈 때: Live Activity 동기화 + 남은 페이즈 알림 예약
                 logger.d("background scene phase")
                 controller.isInBackground = true
+                controller.scheduleBackgroundNotifications()
                 Task { await controller.syncLiveActivityForCurrentState() }
             case .active:
-                // 다시 앱으로 돌아오면 Live Activity는 유지해도 되고,
-                // 원하면 끝내도 됨
+                // 복귀: 예약 알림 취소 + 백그라운드에서 흘러간 만큼 상태 보정
                 logger.d("active ground scene ")
                 controller.isInBackground = false
-                break
+                Task { await controller.handleReturnToForeground() }
             default:
                 break
             }
@@ -76,6 +76,22 @@ struct TimerPager: View {
         .onChange(of: page) { newValue in
             logger.d("페이지 변경 \(newValue)")
             hideKeyboard()
+        }
+        .onOpenURL { url in
+            // Live Activity / Dynamic Island 버튼 딥링크 처리
+            // beeptimer://toggle , beeptimer://next
+            guard url.scheme == "beeptimer" else { return }
+            let action = url.host ?? url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            logger.d("onOpenURL action=\(action)")
+            page = 0   // 항상 메인 타이머로
+            switch action {
+            case "toggle":
+                controller.toggle()
+            case "next":
+                _ = controller.nextSet()
+            default:
+                break
+            }
         }
     }
 }

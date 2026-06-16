@@ -77,8 +77,9 @@ class TimerController: ObservableObject {
         switch state {
         case .idle:
             setIndex = 1
+            NotificationService.shared.requestAuthorizationIfNeeded()
             startPhase(timeSec)
-            
+
             Task {
                 await ensureLiveActivityCreated()
             }
@@ -93,6 +94,18 @@ class TimerController: ObservableObject {
         }
     }
     
+    // 재생 ↔ 일시정지 토글 (원 탭 / Live Activity 버튼 공용)
+    func toggle() {
+        switch state {
+        case .running:
+            pause()
+        case .paused(let rem):
+            resume(rem)
+        case .idle:
+            start()
+        }
+    }
+
     // 일시정지 : 남은 시간 저장
     func pause() {
         // running 일 때만 해당 함수 사용 가능.
@@ -137,9 +150,9 @@ class TimerController: ObservableObject {
     }
     
     func progress(at now: Date) -> CGFloat {
+        // 현재 페이즈(time/rest) 기준 비율. total은 이미 0 방지 클램프됨.
         let total = max(0.001, currentTotal())
         let rem = remaining(at: now)
-        guard timeSec > 0 else { return 0 }
         return CGFloat(rem / total)
     }
     
@@ -152,15 +165,7 @@ class TimerController: ObservableObject {
         }
     }
     
-    func displayRemaing(at now: Date) -> Int {
-        switch state {
-        case .idle:
-            return Int(ceil(timeSec))
-        default:
-            return Int(ceil(remaining(at: now)))
-        }
-    }
-    
+    // idle일 때 remaining(at:)이 timeSec를 돌려주므로 별도 분기 불필요
     func displayRemaining(at now: Date) -> Int {
         Int(ceil(remaining(at: now)))
     }
@@ -177,37 +182,12 @@ class TimerController: ObservableObject {
     }
     
     // 핵심 로직. / 타이머 하나 끝날때 호출
+    // 포그라운드에서 TimelineView가 구동될 때만 호출된다.
+    // 백그라운드 진행은 예약 알림 + 복귀 시 catchUp으로 처리한다.
     func advancePhase() {
-        // 포그라운드 / 백그라운드에 따라 다른 행동.
-        if isInBackground {
-            handleBackgroundPhaseChange()
-            return
-        }
-        
         handleForegroundPhaseChange()
     }
-    
-    // 백그라운드
-    func handleBackgroundPhaseChange(){
-        if phase == .time {
-            phase = .rest
-            state = .paused(remainig: restSec)
-        } else { // rest
-            if setIndex < totalSets {
-                setIndex += 1
-                phase = .time
-                state = .paused(remainig: timeSec)
-            } else {
-                state = .idle
-                phase = .time
-                onEnded?()
-            }
-        }
 
-        // Live Activity → 0초 + 체크로 고정
-        Task { await markLiveActivityDone() }
-    }
-    
     // 포그라운드
     func handleForegroundPhaseChange(){
         if phase == .time {
@@ -280,19 +260,6 @@ class TimerController: ObservableObject {
 //        }
     }
 
-    
-    func goToSet(_ target: Int) -> Bool {
-        let clamped = max(1, min(totalSets, target))
-        guard clamped != setIndex || phase != .time else {
-            startPhase(timeSec)
-            return true
-        }
-        
-        setIndex = clamped
-        phase = .time
-        startPhase(timeSec)
-        return true
-    }
     
     func previousSet() -> Bool {
         guard setIndex > 1 else { return false }
@@ -456,27 +423,138 @@ extension TimerController {
         return phase == .rest ? "rest" : "time"
     }
 
-    fileprivate func markLiveActivityDone() async {
-        guard let liveActivity else { return }
-        
-        logger.d("liveActivity Done \(phaseString())")
-
-        let state = BeepTimerWidgetAttributes.ContentState(
-            phase: phaseString(),
-            status: "done",
-            endTime: Date(),
-            remainSec: 0,
-            setIndex: setIndex,
-            totalSets: totalSets
-        )
-
-        await liveActivity.update(using: state)
-    }
-
     fileprivate func endLiveActivity(immediate: Bool) async {
         guard let liveActivity else { return }
         await liveActivity.end(dismissalPolicy: immediate ? .immediate : .default)
         self.liveActivity = nil
+    }
+}
+
+// MARK: - 백그라운드 타임라인 / 로컬 알림
+extension TimerController {
+
+    /// 자동 진행되는 페이즈 한 구간
+    struct Seg {
+        let phase: Phase
+        let setIndex: Int
+        let start: Date
+        let end: Date
+    }
+
+    /// 타임라인 생성 결과 (자동 진행 구간들 + 멈추는 지점)
+    struct Timeline {
+        enum Terminal {
+            case done(lastSet: Int)
+            case pause(phase: Phase, setIndex: Int, duration: TimeInterval)
+        }
+        var segments: [Seg]
+        var terminal: Terminal
+    }
+
+    /// 현재 running 상태(firstEnd = 현재 페이즈 종료시각)에서 출발해
+    /// autoMode 규칙대로 자동 진행되는 페이즈 경계들을 계산한다.
+    /// 자동 진행이 멈추는 지점(.pause) 또는 전체 종료(.done)에서 끝난다.
+    func buildTimeline(firstEnd: Date) -> Timeline {
+        let mode = SettingManager.shared.autoMode
+
+        var segments: [Seg] = []
+        var curPhase = phase
+        var curSet = setIndex
+        var curEnd = firstEnd
+        segments.append(Seg(phase: curPhase, setIndex: curSet, start: Date(), end: curEnd))
+
+        while true {
+            if curPhase == .time {
+                // time 종료 → rest (manual이면 여기서 멈춤)
+                guard mode == .fullAuto || mode == .setAuto else {
+                    return Timeline(segments: segments,
+                                    terminal: .pause(phase: .rest, setIndex: curSet, duration: restSec))
+                }
+                let s = curEnd
+                curEnd = curEnd.addingTimeInterval(restSec)
+                curPhase = .rest
+                segments.append(Seg(phase: curPhase, setIndex: curSet, start: s, end: curEnd))
+            } else {
+                // rest 종료 → 다음 세트 or 전체 종료
+                guard curSet < totalSets else {
+                    return Timeline(segments: segments, terminal: .done(lastSet: curSet))
+                }
+                curSet += 1
+                // setAuto는 세트 경계에서 멈춘다 (fullAuto만 계속)
+                guard mode == .fullAuto else {
+                    return Timeline(segments: segments,
+                                    terminal: .pause(phase: .time, setIndex: curSet, duration: timeSec))
+                }
+                let s = curEnd
+                curEnd = curEnd.addingTimeInterval(timeSec)
+                curPhase = .time
+                segments.append(Seg(phase: curPhase, setIndex: curSet, start: s, end: curEnd))
+            }
+        }
+    }
+
+    private func boundaries(from timeline: Timeline) -> [PhaseBoundary] {
+        let segs = timeline.segments
+        return segs.indices.map { i in
+            let next: PhaseBoundary.NextKind
+            if i + 1 < segs.count {
+                let n = segs[i + 1]
+                next = (n.phase == .time) ? .time(set: n.setIndex) : .rest(set: n.setIndex)
+            } else {
+                switch timeline.terminal {
+                case .done:
+                    next = .done
+                case .pause(let p, let s, _):
+                    next = (p == .time) ? .time(set: s) : .rest(set: s)
+                }
+            }
+            return PhaseBoundary(fireDate: segs[i].end, next: next)
+        }
+    }
+
+    /// 백그라운드 진입 시: 남은 운동 전체에 대해 페이즈 알림을 예약한다.
+    func scheduleBackgroundNotifications() {
+        guard case .running(_, let end) = state else {
+            NotificationService.shared.cancelAll()
+            return
+        }
+        let timeline = buildTimeline(firstEnd: end)
+        NotificationService.shared.schedule(boundaries: boundaries(from: timeline))
+    }
+
+    /// 포그라운드 복귀 시: 예약 알림을 지우고, 백그라운드에서 흘러간 만큼 상태를 따라잡는다.
+    func handleReturnToForeground() async {
+        NotificationService.shared.cancelAll()
+        catchUpFromBackground()
+        await syncLiveActivityForCurrentState()
+    }
+
+    /// 백그라운드 동안 흘러간 시간을 반영해 현재 phase/setIndex/state를 보정한다.
+    private func catchUpFromBackground() {
+        guard case .running(_, let firstEnd) = state else { return }
+        let now = Date()
+        guard now >= firstEnd else { return }   // 현재 페이즈 진행 중이면 그대로 둔다
+
+        let timeline = buildTimeline(firstEnd: firstEnd)
+
+        if let seg = timeline.segments.first(where: { now < $0.end }) {
+            // now가 어떤 자동 진행 구간 안에 있다 → 그 구간을 진행 중으로
+            phase = seg.phase
+            setIndex = seg.setIndex
+            state = .running(start: seg.start, end: seg.end)
+        } else {
+            // 모든 자동 구간을 지났다 → 종료 또는 멈춤 지점
+            switch timeline.terminal {
+            case .done(let lastSet):
+                setIndex = lastSet
+                stop()
+                onEnded?()
+            case .pause(let p, let s, let dur):
+                phase = p
+                setIndex = s
+                state = .paused(remainig: dur)
+            }
+        }
     }
 }
 

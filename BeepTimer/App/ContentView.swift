@@ -17,6 +17,11 @@ struct ContentView: View {
     @State private var setCount: Int = 2
     @State var currentSet: Int = 1
     
+    private var isIdle: Bool {
+        if case .idle = controller.state { return true }
+        return false
+    }
+
     func mmss(_ sec: Int) -> String {
         let s = max(0, sec)
         let m = s / 60
@@ -83,18 +88,29 @@ struct ContentView: View {
                         case .manual:   settings.autoMode = .fullAuto
                         }
                     } label: {
-                        Image(systemName: {
-                            switch settings.autoMode {
-                            case .fullAuto: "repeat"
-                            case .setAuto:  "repeat.1"
-                            case .manual:   "repeat"
-                            }
-                        }())
-                        .resizable()
-                        .frame(width: 22, height: 22)
-                        .font(.system(size: 18, weight: .semibold))
-                        .opacity(settings.autoMode == .manual ? 0.3 : 1)
+                        VStack(spacing: 2) {
+                            Image(systemName: {
+                                switch settings.autoMode {
+                                case .fullAuto: "repeat"        // 전체 자동 반복
+                                case .setAuto:  "repeat.1"      // 세트 단위 자동
+                                case .manual:   "hand.raised.fill" // 수동
+                                }
+                            }())
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
+
+                            Text({
+                                switch settings.autoMode {
+                                case .fullAuto: "Auto"
+                                case .setAuto:  "Set"
+                                case .manual:   "Manual"
+                                }
+                            }())
+                            .font(.system(size: 9, weight: .semibold))
+                        }
                     }
+                    .accessibilityLabel("자동 모드: \(settings.autoMode == .fullAuto ? "전체 자동" : settings.autoMode == .setAuto ? "세트 자동" : "수동")")
                     
                     Spacer()
                     
@@ -124,8 +140,22 @@ struct ContentView: View {
                 )
                 .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 6)
                 .foregroundStyle(Color.white)
-                
-                
+
+                // 정지 / 리셋 (idle일 땐 비활성)
+                Button {
+                    logger.d("stop / reset")
+                    controller.stop()
+                } label: {
+                    Label("Stop", systemImage: "stop.fill")
+                        .font(.fromCSSFont(15, weight: .semibold))
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 22)
+                        .background(TimerColor.btnResetBg.opacity(isIdle ? 0.12 : 0.22), in: Capsule())
+                        .foregroundStyle(TimerColor.btnResetBg)
+                }
+                .disabled(isIdle)
+                .opacity(isIdle ? 0.4 : 1)
+
                 VStack(spacing: 20){
                     HStack{
                         Text("Time")

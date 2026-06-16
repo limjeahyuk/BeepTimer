@@ -30,76 +30,94 @@ struct ProgramRowCard: View {
     }
 
     
+    // 파생값 (type-checker 부담을 줄이기 위해 분리)
+    private var allSteps: [RStep] { Array(program.steps) }
+    private var setCount: Int { allSteps.filter { $0.kindRaw.lowercased() == "time" }.count }
+    private var totalSec: Int { allSteps.reduce(0) { $0 + $1.seconds } }
+    private var firstTimeSec: Int { allSteps.first { $0.kindRaw.lowercased() == "time" }?.seconds ?? 0 }
+    private var firstRestSec: Int { allSteps.first { $0.kindRaw.lowercased() == "rest" }?.seconds ?? 0 }
+
     var body: some View {
-        let steps = Array(program.steps)
-        let timeCount = steps.filter { $0.kindRaw.lowercased() == "time" }
-        let restCount = steps.filter { $0.kindRaw.lowercased() == "rest" }
-        let setCount = steps.filter { $0.kindRaw.lowercased() == "time" }.count
-        let totalSec = steps.reduce(0) { $0 + $1.seconds }
-        
         VStack(spacing: 0) {
             VStack {
-                Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
-                        expanded.toggle()
-                    }
-                } label: {
-                    HStack(alignment: .center, spacing: 14) {
-                        Circle().fill(isActive ? Color.red : Color(hex: "#22D3EE"))
-                            .frame(width: 10, height: 10)
-                        
-                        Text(program.title)
-                            .font(.fromCSSFont(17, weight: .semibold))
-                            .foregroundStyle(TimerColor.textPrimary)
-                            .lineLimit(1)
-                        
-                        Spacer()
-                        
-                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                            .font(.fromCSSFont(14, weight: .bold))
-                            .foregroundStyle(TimerColor.textSecondary)
-                    }
-                    .padding(.bottom, 5)
-                }
-                .buttonStyle(.plain)
-                
-                
-                if !expanded {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack{
-                                Text("Total \(mmss(totalSec)) - Sets \(setCount)")
-                                Spacer()
-                            }
-                            HStack{
-                                Text("Time \(mmss(timeCount.first?.seconds ?? 0)) - Rest \(mmss(restCount.first?.seconds ?? 0))")
-                                Spacer()
-                            }
-                        }
-                        .font(.fromCSSFont(13, weight: .medium))
-                        .fontDesign(.rounded)
-                        .foregroundStyle(TimerColor.textSecondary)
-                        .lineLimit(2)
-                        
-                        Spacer()
-                        
-                        Button {
-                            onStart()
-                        } label: {
-                            Image(systemName: "play.fill")
-                                .font(.fromCSSFont(14, weight: .bold))
-                                .foregroundStyle(Color.blue)                   // 아이콘 파랑
-                                .padding(10)
-                                .background(Circle().fill(Color.blue.opacity(0.18))) // 연파랑 배경
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                    
+                header
+                if !expanded { collapsedSummary }
             }
-            
-            
-            if expanded {
+            if expanded { expandedEditor }
+        }
+        .contentShape(Rectangle())
+        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.20), radius: 10, x: 0, y: 6)
+    }
+
+    private var header: some View {
+        Button {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                expanded.toggle()
+            }
+        } label: {
+            HStack(alignment: .center, spacing: 14) {
+                Circle().fill(isActive ? Color.red : Color(hex: "#22D3EE"))
+                    .frame(width: 10, height: 10)
+
+                Text(program.title)
+                    .font(.fromCSSFont(17, weight: .semibold))
+                    .foregroundStyle(TimerColor.textPrimary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                    .font(.fromCSSFont(14, weight: .bold))
+                    .foregroundStyle(TimerColor.textSecondary)
+            }
+            .padding(.bottom, 5)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var collapsedSummary: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 5) {
+                HStack{
+                    Text("Total \(mmss(totalSec)) - Sets \(setCount)")
+                    Spacer()
+                }
+                HStack{
+                    Text("Time \(mmss(firstTimeSec)) - Rest \(mmss(firstRestSec))")
+                    Spacer()
+                }
+            }
+            .font(.fromCSSFont(13, weight: .medium))
+            .fontDesign(.rounded)
+            .foregroundStyle(TimerColor.textSecondary)
+            .lineLimit(2)
+
+            Spacer()
+
+            Button {
+                onStart()
+            } label: {
+                Image(systemName: "play.fill")
+                    .font(.fromCSSFont(14, weight: .bold))
+                    .foregroundStyle(Color.blue)                   // 아이콘 파랑
+                    .padding(10)
+                    .background(Circle().fill(Color.blue.opacity(0.18))) // 연파랑 배경
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var expandedEditor: some View {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Title")
@@ -156,7 +174,7 @@ struct ProgramRowCard: View {
                             let clone = RTimerProgram()
                             clone.title = nextCloneTitle(base: program.title)
                             clone.createdAt = Date()
-                            let list = List<RStep>()
+                            let list = RealmSwift.List<RStep>()
                             for s in program.steps {
                                 let c = RStep()
                                 c.kindRaw = s.kindRaw
@@ -199,20 +217,6 @@ struct ProgramRowCard: View {
                     }
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .contentShape(Rectangle())
-        .padding(.vertical, 14)
-        .padding(.horizontal, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.20), radius: 10, x: 0, y: 6)
     }
 }
 

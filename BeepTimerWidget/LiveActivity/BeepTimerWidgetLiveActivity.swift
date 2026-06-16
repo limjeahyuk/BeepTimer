@@ -171,8 +171,8 @@ struct BeepTimerWidgetLiveActivity: Widget {
                 // 확장 - 아래 (재생 / 다음 버튼 예시)
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 12) {
-                        // 재생 / 일시정지 토글용 딥링크 (예시)
-                        Link(destination: URL(string: "beeptimer://action=toggle")!) {
+                        // 재생 / 일시정지 토글용 딥링크
+                        Link(destination: URL(string: "beeptimer://toggle")!) {
                             Label(
                                 status == .running ? "일시정지" : "재생",
                                 systemImage: status == .running ? "pause.fill" : "play.fill"
@@ -184,8 +184,8 @@ struct BeepTimerWidgetLiveActivity: Widget {
                             .clipShape(Capsule())
                         }
 
-                        // 다음 세트로 건너뛰기 딥링크 (예시)
-                        Link(destination: URL(string: "beeptimer://action=next")!) {
+                        // 다음 세트로 건너뛰기 딥링크
+                        Link(destination: URL(string: "beeptimer://next")!) {
                             Label("다음 세트", systemImage: "forward.fill")
                                 .font(.caption)
                                 .padding(.horizontal, 10)
