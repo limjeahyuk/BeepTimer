@@ -78,7 +78,7 @@ struct CircleTimerView: View {
                     .contentTransition(.numericText())
                     
                 VStack{
-                    Text(controller.phase == .time ? "Time" : "Rest")
+                    Text(controller.phaseLabel)
                         .font(.system(size: max(12, ringWidth * 1.5), weight: .bold, design: .rounded))
                         .foregroundStyle(controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest)
                         .monospacedDigit()

@@ -34,6 +34,25 @@ class TimerController: ObservableObject {
     @Published var timeSec: TimeInterval = 30
     @Published var restSec: TimeInterval = 15
     @Published var totalSets: Int = 3
+
+    // MARK: 상세(커스텀) 모드 — 단계 배열을 순서대로 진행
+    struct CustomStep: Equatable {
+        var title: String          // 단계 이름 (비어있으면 Time/Rest로 표시)
+        var isRest: Bool
+        var seconds: TimeInterval
+    }
+    @Published private(set) var customSteps: [CustomStep] = []
+    @Published private(set) var stepIndex: Int = 0
+    var isCustomMode: Bool { !customSteps.isEmpty }
+
+    /// 원 안에 표시할 페이즈 라벨 (커스텀 모드면 단계 이름)
+    var phaseLabel: String {
+        if isCustomMode, stepIndex < customSteps.count {
+            let t = customSteps[stepIndex].title
+            if !t.isEmpty { return t }
+        }
+        return phase == .time ? "Time" : "Rest"
+    }
     
     // 외부에서는 읽기만 가능.
     // state는 무조건 내부에서만 변경 가능.
@@ -47,21 +66,51 @@ class TimerController: ObservableObject {
     var onStart: (() -> Void)?
     var onEnded: (() -> Void)?
     var onPhaseChanged: ((Phase, Int) -> Void)?
+    /// Time/Rest 페이즈가 끝날 때마다 호출 (마지막 세트 완료는 onEnded로만 알림)
+    var onPhaseEnded: ((Phase) -> Void)?
     
     // Dynamic
     var liveActivity: Activity<BeepTimerWidgetAttributes>?
 
-    // 위젯(잠금화면/다이나믹 아일랜드) 버튼이 앱 프로세스에서 찾는 단일 인스턴스
+    // 위젯(잠금화면/다이나믹 아일랜드) 버튼이 앱 프로세스에서 찾는 기본 인스턴스
     static let shared = TimerController()
 
-    private init() {
-        // LiveActivityIntent.perform()이 이 인스턴스를 찾을 수 있도록 등록
-        TimerWidgetActionBus.handler = self
+    // 타이머(프로그램)마다 별도 인스턴스를 만들 수 있다.
+    // 위젯 버튼은 가장 최근에 시작된 컨트롤러로 라우팅된다 (start() 참고).
+    init() {
+        if TimerWidgetActionBus.handler == nil {
+            TimerWidgetActionBus.handler = self
+        }
     }
 
     private var beeped: Set<Int> = []   // 3,2,1 중복 방지
     private var didEndBeep = false      // 0초(끝) 중복 방지
     private var lastBeepEndTime: Date? = nil
+
+    // 화면 밖(다른 페이지)에서도 진행/비프가 동작하도록 하는 내부 티커.
+    // 보이는 페이지의 TimelineView와 중복 호출돼도 beeped/state 가드로 안전하다.
+    private var ticker: Timer?
+
+    private func startTicker() {
+        stopTicker()
+        let t = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in
+            self?.tickerFired()
+        }
+        RunLoop.main.add(t, forMode: .common)
+        ticker = t
+    }
+
+    private func stopTicker() {
+        ticker?.invalidate()
+        ticker = nil
+    }
+
+    private func tickerFired() {
+        // 백그라운드 진행은 예약 알림 + 복귀 catchUp이 담당
+        guard !isInBackground, case .running(_, let end) = state else { return }
+        handleBeepIfNeeded(displayRemaining: displayRemaining(at: Date()), endTime: end)
+        tryFireEndIfNeeded()
+    }
     
     var currentEndTime: Date? {
         if case .running(_, let end) = state { return end }
@@ -70,16 +119,43 @@ class TimerController: ObservableObject {
     
     // phase에 맞춰서 설정되어있는 time
     func currentTotal() -> TimeInterval {
-        phase == .time ? timeSec : restSec
+        if isCustomMode, stepIndex < customSteps.count {
+            return customSteps[stepIndex].seconds
+        }
+        return phase == .time ? timeSec : restSec
     }
     
-    // 초기화
+    // 초기화 (단순 반복 모드)
     func configure(title: String, time: Int, rest: Int, sets: Int){
         timerTitle = title
         timeSec = TimeInterval(time)
         restSec = TimeInterval(rest)
         totalSets = sets
+        customSteps = []
+        stepIndex = 0
         publishWidgetSnapshot()
+    }
+
+    // 초기화 (상세 모드) — 단계를 순서대로 진행하며 항상 자동 진행된다.
+    func configureCustom(title: String, steps: [CustomStep]) {
+        timerTitle = title
+        customSteps = steps
+        stepIndex = 0
+        // 위젯/요약 표시용 대푯값
+        timeSec = steps.first(where: { !$0.isRest })?.seconds ?? 30
+        restSec = steps.first(where: { $0.isRest })?.seconds ?? 0
+        totalSets = max(1, steps.filter { !$0.isRest }.count)
+        publishWidgetSnapshot()
+    }
+
+    /// 커스텀 모드: index 단계 기준 phase/setIndex 동기화
+    private func syncCustomPhase(at index: Int) {
+        guard index < customSteps.count else { return }
+        stepIndex = index
+        phase = customSteps[index].isRest ? .rest : .time
+        // setIndex = 현재까지 지나온 운동(time) 단계 개수 (표시용)
+        let ordinal = customSteps[0...index].filter { !$0.isRest }.count
+        setIndex = max(1, ordinal)
     }
 
     /// 현재 설정/상태를 App Group에 저장하고 홈 화면 위젯 타임라인을 갱신한다.
@@ -111,11 +187,18 @@ class TimerController: ObservableObject {
 
     // 새로 시작 무조건 처음부터
     func start() {
+        // Live Activity / 위젯 버튼이 가장 최근에 시작한 타이머를 조작하도록 등록
+        TimerWidgetActionBus.handler = self
         switch state {
         case .idle:
             setIndex = 1
             NotificationService.shared.requestAuthorizationIfNeeded()
-            startPhase(timeSec)
+            if isCustomMode {
+                syncCustomPhase(at: 0)
+                startPhase(customSteps[0].seconds)
+            } else {
+                startPhase(timeSec)
+            }
 
             Task {
                 await ensureLiveActivityCreated()
@@ -151,6 +234,7 @@ class TimerController: ObservableObject {
         // timeIntervalSince : Date() - end
         let rem = max(0, end.timeIntervalSince(Date()))
         state = .paused(remainig: rem)
+        stopTicker()
         refreshLiveActivity()
     }
 
@@ -159,6 +243,7 @@ class TimerController: ObservableObject {
         let now = Date()
         // state 변경. running (지금 시간 부터 지금으로부터 남은 시간.)
         state = .running(start: now, end: now.addingTimeInterval(rem))
+        startTicker()
         // Live Activity 업데이트 (현재 phase 유지, endTime 갱신)
         refreshLiveActivity()
     }
@@ -174,6 +259,7 @@ class TimerController: ObservableObject {
     func stop() {
         state = .idle
         phase = .time
+        stopTicker()
         publishWidgetSnapshot()
         // Live Activity 종료
         Task { await endLiveActivity(immediate: true) }
@@ -223,6 +309,7 @@ class TimerController: ObservableObject {
         let now = Date()
         // state 변경 및 시간 저장 / start & end
         state = .running(start: now, end: now.addingTimeInterval(duration))
+        startTicker()
         onPhaseChanged?(phase, setIndex)
         refreshLiveActivity()
     }
@@ -236,7 +323,24 @@ class TimerController: ObservableObject {
 
     // 포그라운드
     func handleForegroundPhaseChange(){
+        // 상세(커스텀) 모드: 단계를 순서대로 진행 (항상 자동)
+        if isCustomMode {
+            let next = stepIndex + 1
+            if next < customSteps.count {
+                onPhaseEnded?(phase)
+                syncCustomPhase(at: next)
+                startPhase(customSteps[next].seconds)
+            } else {
+                state = .idle
+                phase = .time
+                stop()
+                onEnded?()
+            }
+            return
+        }
+
         if phase == .time {
+            onPhaseEnded?(.time)
             phase = .rest
             switch SettingManager.shared.autoMode {
             case .fullAuto, .setAuto:
@@ -245,11 +349,13 @@ class TimerController: ObservableObject {
             case .manual:
                 logger.d("autoMode .setAuto / .manual")
                 state = .paused(remainig: restSec)
+                stopTicker()
                 refreshLiveActivity()
             }
         }else{
             if setIndex < totalSets {
                 logger.d("advancePhase setIndex < total")
+                onPhaseEnded?(.rest)
                 setIndex += 1
                 phase = .time
                 switch SettingManager.shared.autoMode {
@@ -259,6 +365,7 @@ class TimerController: ObservableObject {
                 case .setAuto, .manual:
                     logger.d("autoMode .setAuto / .manual")
                     state = .paused(remainig: timeSec)
+                    stopTicker()
                     refreshLiveActivity()
                 }
             }else{
@@ -310,14 +417,26 @@ class TimerController: ObservableObject {
 
     
     func previousSet() -> Bool {
+        if isCustomMode {
+            guard stepIndex > 0 else { return false }
+            syncCustomPhase(at: stepIndex - 1)
+            startPhase(customSteps[stepIndex].seconds)
+            return true
+        }
         guard setIndex > 1 else { return false }
         setIndex -= 1
         phase = .time
         startPhase(timeSec)
         return true
     }
-    
+
     func nextSet() -> Bool {
+        if isCustomMode {
+            guard stepIndex + 1 < customSteps.count else { return false }
+            syncCustomPhase(at: stepIndex + 1)
+            startPhase(customSteps[stepIndex].seconds)
+            return true
+        }
         guard setIndex < totalSets else {
             // 마지막 세트에서 더 못 올라감.
             // stop() & onEnded?()
@@ -488,6 +607,7 @@ extension TimerController {
         let setIndex: Int
         let start: Date
         let end: Date
+        var stepIdx: Int = 0   // 커스텀 모드에서 단계 인덱스 복원용
     }
 
     /// 타임라인 생성 결과 (자동 진행 구간들 + 멈추는 지점)
@@ -504,6 +624,25 @@ extension TimerController {
     /// autoMode 규칙대로 자동 진행되는 페이즈 경계들을 계산한다.
     /// 자동 진행이 멈추는 지점(.pause) 또는 전체 종료(.done)에서 끝난다.
     func buildTimeline(firstEnd: Date) -> Timeline {
+        // 상세(커스텀) 모드: 남은 단계를 순서대로 이어붙인다 (항상 자동 진행)
+        if isCustomMode {
+            var segments: [Seg] = [Seg(phase: phase, setIndex: setIndex,
+                                       start: Date(), end: firstEnd, stepIdx: stepIndex)]
+            var curEnd = firstEnd
+            var ordinal = setIndex
+            var i = stepIndex + 1
+            while i < customSteps.count {
+                let st = customSteps[i]
+                if !st.isRest { ordinal += 1 }
+                let s = curEnd
+                curEnd = curEnd.addingTimeInterval(st.seconds)
+                segments.append(Seg(phase: st.isRest ? .rest : .time, setIndex: ordinal,
+                                    start: s, end: curEnd, stepIdx: i))
+                i += 1
+            }
+            return Timeline(segments: segments, terminal: .done(lastSet: ordinal))
+        }
+
         let mode = SettingManager.shared.autoMode
 
         var segments: [Seg] = []
@@ -591,6 +730,7 @@ extension TimerController {
             // now가 어떤 자동 진행 구간 안에 있다 → 그 구간을 진행 중으로
             phase = seg.phase
             setIndex = seg.setIndex
+            if isCustomMode { stepIndex = seg.stepIdx }
             state = .running(start: seg.start, end: seg.end)
         } else {
             // 모든 자동 구간을 지났다 → 종료 또는 멈춤 지점

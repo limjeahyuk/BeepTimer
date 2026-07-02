@@ -39,22 +39,23 @@ struct ProgramRowCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack {
-                header
-                if !expanded { collapsedSummary }
+            header
+            if expanded {
+                expandedEditor
+                    .padding(.top, 12)
             }
-            if expanded { expandedEditor }
         }
         .contentShape(Rectangle())
-        .padding(.vertical, 14)
-        .padding(.horizontal, 14)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.white.opacity(isActive ? 0.10 : 0.05))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(isActive ? Color(hex: "#22D3EE").opacity(0.5) : Color.white.opacity(0.08),
+                        lineWidth: isActive ? 1.5 : 1)
         )
         .shadow(color: .black.opacity(0.20), radius: 10, x: 0, y: 6)
     }
@@ -65,56 +66,74 @@ struct ProgramRowCard: View {
                 expanded.toggle()
             }
         } label: {
-            HStack(alignment: .center, spacing: 14) {
-                Circle().fill(isActive ? Color.red : Color(hex: "#22D3EE"))
-                    .frame(width: 10, height: 10)
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text(program.title)
+                            .font(.fromCSSFont(17, weight: .bold))
+                            .foregroundStyle(TimerColor.textPrimary)
+                            .lineLimit(1)
 
-                Text(program.title)
-                    .font(.fromCSSFont(17, weight: .semibold))
-                    .foregroundStyle(TimerColor.textPrimary)
-                    .lineLimit(1)
+                        if isActive {
+                            Text("사용 중")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color(hex: "#22D3EE"))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(Color(hex: "#22D3EE").opacity(0.15)))
+                        }
+
+                        Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(TimerColor.textSecondary)
+                    }
+
+                    HStack(spacing: 6) {
+                        statChip(icon: "timer", text: mmss(firstTimeSec))
+                        statChip(icon: "pause.circle", text: mmss(firstRestSec))
+                        statChip(icon: "repeat", text: "\(setCount)")
+                    }
+                }
 
                 Spacer()
 
-                Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                    .font(.fromCSSFont(14, weight: .bold))
-                    .foregroundStyle(TimerColor.textSecondary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(mmss(totalSec))
+                        .font(.fromCSSFont(16, weight: .bold))
+                        .monospacedDigit()
+                        .foregroundStyle(TimerColor.textPrimary)
+                    Text("총 시간")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(TimerColor.textSecondary)
+                }
+
+                Button {
+                    onStart()
+                } label: {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(Circle().fill(Color(hex: "#22D3EE").opacity(0.85)))
+                }
+                .buttonStyle(.plain)
             }
-            .padding(.bottom, 5)
         }
         .buttonStyle(.plain)
     }
 
-    private var collapsedSummary: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack{
-                    Text("Total \(mmss(totalSec)) - Sets \(setCount)")
-                    Spacer()
-                }
-                HStack{
-                    Text("Time \(mmss(firstTimeSec)) - Rest \(mmss(firstRestSec))")
-                    Spacer()
-                }
-            }
-            .font(.fromCSSFont(13, weight: .medium))
-            .fontDesign(.rounded)
-            .foregroundStyle(TimerColor.textSecondary)
-            .lineLimit(2)
-
-            Spacer()
-
-            Button {
-                onStart()
-            } label: {
-                Image(systemName: "play.fill")
-                    .font(.fromCSSFont(14, weight: .bold))
-                    .foregroundStyle(Color.blue)                   // 아이콘 파랑
-                    .padding(10)
-                    .background(Circle().fill(Color.blue.opacity(0.18))) // 연파랑 배경
-            }
-            .buttonStyle(.plain)
+    private func statChip(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .monospacedDigit()
         }
+        .foregroundStyle(TimerColor.textSecondary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Capsule().fill(Color.white.opacity(0.07)))
     }
 
     private var expandedEditor: some View {

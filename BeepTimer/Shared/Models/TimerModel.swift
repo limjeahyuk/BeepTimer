@@ -16,6 +16,7 @@ struct TimerModel: Codable, Identifiable, Equatable {
         enum Kind: String, Codable { case time, rest }
         let kind: Kind
         let seconds: Int
+        var title: String? = nil   // 상세 모드 단계 이름 (예: 팔굽혀펴기)
     }
 }
 
@@ -33,5 +34,22 @@ extension TimerModel {
         guard let t0 = times.first, let r0 = rests.first else { return nil }
         guard times.allSatisfy({ $0 == t0 }), rests.allSatisfy({ $0 == r0 }) else { return nil }
         return (time: t0, rest: r0, sets: setsCount)
+    }
+
+    /// 상세(커스텀) 프로그램 여부:
+    /// 단계 이름이 하나라도 있거나, 시간이 균일하지 않거나, time/rest 교대 패턴이 아니면 커스텀.
+    var isCustom: Bool {
+        guard !steps.isEmpty else { return false }
+        if steps.contains(where: { !($0.title ?? "").isEmpty }) { return true }
+        guard asTimeRestSets() != nil else { return true }
+        for (i, s) in steps.enumerated() {
+            let expected: Step.Kind = (i % 2 == 0) ? .time : .rest
+            if s.kind != expected { return true }
+        }
+        return false
+    }
+
+    var totalSeconds: Int {
+        steps.reduce(0) { $0 + $1.seconds }
     }
 }

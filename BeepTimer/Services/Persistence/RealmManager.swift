@@ -18,6 +18,7 @@ class RTimerProgram: Object, ObjectKeyIdentifiable {
 class RStep: EmbeddedObject {
     @Persisted var kindRaw: String = "time"
     @Persisted var seconds: Int = 10
+    @Persisted var title: String = ""   // 상세 모드에서 단계별 이름 (예: 팔굽혀펴기)
 }
 
 
@@ -31,17 +32,19 @@ extension RTimerProgram {
             let rs = RStep()
             rs.kindRaw = s.kind.rawValue
             rs.seconds = s.seconds
+            rs.title = s.title ?? ""
             list.append(rs)
         }
         self.steps = list
     }
-    
+
     func toModel() -> TimerModel {
         TimerModel(
             title: title,
             steps: steps.map {
                 TimerModel.Step(kind: .init(rawValue: $0.kindRaw) ?? .time,
-                                seconds: $0.seconds)
+                                seconds: $0.seconds,
+                                title: $0.title.isEmpty ? nil : $0.title)
             }
         )
     }
@@ -52,7 +55,7 @@ struct ProgramStore {
     
     static func open() throws -> ProgramStore {
         let config = Realm.Configuration(
-            schemaVersion: 1) { _, _ in
+            schemaVersion: 2) { _, _ in
                 logger.d("migration nothing")
             }
         return try ProgramStore(realm: Realm(configuration: config))
