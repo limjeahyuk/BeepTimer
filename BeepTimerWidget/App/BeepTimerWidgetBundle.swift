@@ -11,7 +11,7 @@ import SwiftUI
 @main
 struct BeepTimerWidgetBundle: WidgetBundle {
     var body: some Widget {
-//        BeepTimerWidget()
+        BeepTimerWidget()
 //        BeepTimerWidgetControl()
         BeepTimerWidgetLiveActivity()
     }

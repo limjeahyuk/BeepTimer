@@ -7,6 +7,7 @@
 
 import SwiftUI
 import ActivityKit
+import WidgetKit
 
 enum TimerPhaseState {
     case running
@@ -49,7 +50,15 @@ class TimerController: ObservableObject {
     
     // Dynamic
     var liveActivity: Activity<BeepTimerWidgetAttributes>?
-    
+
+    // 위젯(잠금화면/다이나믹 아일랜드) 버튼이 앱 프로세스에서 찾는 단일 인스턴스
+    static let shared = TimerController()
+
+    private init() {
+        // LiveActivityIntent.perform()이 이 인스턴스를 찾을 수 있도록 등록
+        TimerWidgetActionBus.handler = self
+    }
+
     private var beeped: Set<Int> = []   // 3,2,1 중복 방지
     private var didEndBeep = false      // 0초(끝) 중복 방지
     private var lastBeepEndTime: Date? = nil
@@ -70,6 +79,34 @@ class TimerController: ObservableObject {
         timeSec = TimeInterval(time)
         restSec = TimeInterval(rest)
         totalSets = sets
+        publishWidgetSnapshot()
+    }
+
+    /// 현재 설정/상태를 App Group에 저장하고 홈 화면 위젯 타임라인을 갱신한다.
+    func publishWidgetSnapshot() {
+        let snapshot: TimerWidgetSnapshot
+        switch state {
+        case .idle:
+            snapshot = TimerWidgetSnapshot(
+                title: timerTitle, time: Int(timeSec), rest: Int(restSec), sets: totalSets,
+                isActive: false, phaseIsRest: false, setIndex: 1,
+                endTime: nil, isPaused: false, pausedRemain: nil
+            )
+        case .running(_, let end):
+            snapshot = TimerWidgetSnapshot(
+                title: timerTitle, time: Int(timeSec), rest: Int(restSec), sets: totalSets,
+                isActive: true, phaseIsRest: phase == .rest, setIndex: setIndex,
+                endTime: end, isPaused: false, pausedRemain: nil
+            )
+        case .paused(let rem):
+            snapshot = TimerWidgetSnapshot(
+                title: timerTitle, time: Int(timeSec), rest: Int(restSec), sets: totalSets,
+                isActive: true, phaseIsRest: phase == .rest, setIndex: setIndex,
+                endTime: nil, isPaused: true, pausedRemain: Int(ceil(max(0, rem)))
+            )
+        }
+        TimerWidgetStore.save(snapshot)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // 새로 시작 무조건 처음부터
@@ -114,22 +151,30 @@ class TimerController: ObservableObject {
         // timeIntervalSince : Date() - end
         let rem = max(0, end.timeIntervalSince(Date()))
         state = .paused(remainig: rem)
+        refreshLiveActivity()
     }
-    
+
     // 재시작.
     func resume(_ rem: TimeInterval) {
         let now = Date()
         // state 변경. running (지금 시간 부터 지금으로부터 남은 시간.)
         state = .running(start: now, end: now.addingTimeInterval(rem))
-        
         // Live Activity 업데이트 (현재 phase 유지, endTime 갱신)
-//        Task { await updateLiveActivityRunning(end: now.addingTimeInterval(rem)) }
+        refreshLiveActivity()
     }
-    
+
+    /// 현재 상태를 Live Activity에 반영한다. (이미 생성돼 있을 때만 업데이트)
+    func refreshLiveActivity() {
+        publishWidgetSnapshot()
+        guard #available(iOS 16.1, *) else { return }
+        Task { await syncLiveActivityForCurrentState() }
+    }
+
     // 멈추기
     func stop() {
         state = .idle
         phase = .time
+        publishWidgetSnapshot()
         // Live Activity 종료
         Task { await endLiveActivity(immediate: true) }
     }
@@ -179,6 +224,7 @@ class TimerController: ObservableObject {
         // state 변경 및 시간 저장 / start & end
         state = .running(start: now, end: now.addingTimeInterval(duration))
         onPhaseChanged?(phase, setIndex)
+        refreshLiveActivity()
     }
     
     // 핵심 로직. / 타이머 하나 끝날때 호출
@@ -199,6 +245,7 @@ class TimerController: ObservableObject {
             case .manual:
                 logger.d("autoMode .setAuto / .manual")
                 state = .paused(remainig: restSec)
+                refreshLiveActivity()
             }
         }else{
             if setIndex < totalSets {
@@ -212,6 +259,7 @@ class TimerController: ObservableObject {
                 case .setAuto, .manual:
                     logger.d("autoMode .setAuto / .manual")
                     state = .paused(remainig: timeSec)
+                    refreshLiveActivity()
                 }
             }else{
                 state = .idle
@@ -304,6 +352,7 @@ class TimerController: ObservableObject {
         if let data = try? JSONEncoder().encode(cfg) {
             UserDefaults.standard.set(data, forKey: lastConfigKey)
         }
+        publishWidgetSnapshot()
     }
 
     // 로드
@@ -392,7 +441,7 @@ extension TimerController {
 
     private func updateLiveActivityPaused(remain: TimeInterval) async {
         guard let liveActivity else { return }
-        await liveActivity.update(using: makeState(end: Date(), remain: remain))
+        await liveActivity.update(using: makeState(end: Date().addingTimeInterval(remain), remain: remain))
     }
 
     private func makeState(end: Date, remain: TimeInterval?) -> BeepTimerWidgetAttributes.ContentState {
@@ -526,6 +575,7 @@ extension TimerController {
     func handleReturnToForeground() async {
         NotificationService.shared.cancelAll()
         catchUpFromBackground()
+        publishWidgetSnapshot()
         await syncLiveActivityForCurrentState()
     }
 
@@ -553,6 +603,33 @@ extension TimerController {
                 phase = p
                 setIndex = s
                 state = .paused(remainig: dur)
+            }
+        }
+    }
+}
+
+// MARK: - 위젯(잠금화면 / 다이나믹 아일랜드) 버튼 처리
+extension TimerController: TimerWidgetActionHandling {
+    /// LiveActivityIntent.perform()이 앱 프로세스에서 호출한다.
+    /// 앱을 화면에 띄우지 않고도 동작이 실행되므로, 여기서 LA와 예약 알림을 직접 동기화한다.
+    func handleWidgetAction(_ action: TimerWidgetAction) async {
+        await MainActor.run {
+            switch action {
+            case .toggle: self.toggle()
+            case .next:   _ = self.nextSet()
+            case .stop:   self.stop()
+            }
+        }
+
+        // 잠금화면/백그라운드에서 눌린 것이므로 LA를 즉시 갱신하고,
+        // 예약된 페이즈 알림(소리)을 현재 상태에 맞게 다시 맞춘다.
+        await syncLiveActivityForCurrentState()
+
+        await MainActor.run {
+            if case .running = self.state {
+                self.scheduleBackgroundNotifications()
+            } else {
+                NotificationService.shared.cancelAll()
             }
         }
     }

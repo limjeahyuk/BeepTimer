@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TimerPager: View {
-    @StateObject private var controller = TimerController()
+    @StateObject private var controller = TimerController.shared
     @Environment(\.scenePhase) var scenePhase
 
     @State private var page = 0
@@ -89,6 +89,11 @@ struct TimerPager: View {
                 controller.toggle()
             case "next":
                 _ = controller.nextSet()
+            case "start":
+                // 홈 위젯에서 진입: idle이면 바로 시작
+                if case .idle = controller.state { controller.start() }
+            case "open":
+                break   // 앱만 열기
             default:
                 break
             }
