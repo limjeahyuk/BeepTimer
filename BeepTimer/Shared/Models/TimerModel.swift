@@ -10,6 +10,7 @@ import SwiftUI
 struct TimerModel: Codable, Identifiable, Equatable {
     var id = UUID()
     let title: String
+    var infiniteSets: Bool = false   // 세트 무한 반복
     let steps: [Step]
     
     struct Step: Codable, Equatable {

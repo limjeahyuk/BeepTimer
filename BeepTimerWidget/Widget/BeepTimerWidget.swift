@@ -135,7 +135,9 @@ struct BeepTimerWidgetEntryView: View {
         .font(.caption2.weight(.semibold))
     }
 
-    private var setText: String { "Set \(snap.setIndex)/\(snap.sets)" }
+    // 세트 무한 반복(Int.max)은 ∞로 표시
+    private var setsText: String { snap.sets == Int.max ? "∞" : "\(snap.sets)" }
+    private var setText: String { "Set \(snap.setIndex)/\(setsText)" }
 
     // MARK: Small
     private var smallBody: some View {
@@ -146,7 +148,7 @@ struct BeepTimerWidgetEntryView: View {
             HStack {
                 statusLabel
                 Spacer()
-                Text(snap.isActive ? setText : "\(snap.sets)세트")
+                Text(snap.isActive ? setText : "\(setsText)세트")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

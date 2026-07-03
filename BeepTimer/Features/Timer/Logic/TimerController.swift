@@ -30,10 +30,23 @@ class TimerController: ObservableObject {
     }
     
     // config를 이용하여 설정
+    /// totalSets에 이 값이 들어가면 세트 무한 반복 (세트가 끝나지 않는다)
+    static let infiniteSets = Int.max
+
     @Published var timerTitle: String = "Beep Timer"
     @Published var timeSec: TimeInterval = 30
     @Published var restSec: TimeInterval = 15
     @Published var totalSets: Int = 3
+
+    var isInfiniteSets: Bool { totalSets == Self.infiniteSets }
+
+    /// 무한 반복이면 전체 자동(fullAuto)은 사용 불가 — 방치 시 끝없이 돌지 않도록
+    /// 세트 경계에서 멈추는 setAuto로 강등한다.
+    private var effectiveAutoMode: AutoPlayMode {
+        let mode = SettingManager.shared.autoMode
+        if isInfiniteSets, mode == .fullAuto { return .setAuto }
+        return mode
+    }
 
     // MARK: 상세(커스텀) 모드 — 단계 배열을 순서대로 진행
     struct CustomStep: Equatable {
@@ -59,6 +72,9 @@ class TimerController: ObservableObject {
     @Published private(set) var phase: Phase = .time
     @Published private(set) var setIndex: Int = 1
     @Published private(set) var state: State = .idle
+
+    /// 전체 세트 완료 팝업 표시 여부 (탭하면 닫힘)
+    @Published var showCompletionPopup = false
     
     // 포그라운드 / 백그라운드 상태
     @Published var isInBackground: Bool = false
@@ -192,6 +208,7 @@ class TimerController: ObservableObject {
     func start() {
         // Live Activity / 위젯 버튼이 가장 최근에 시작한 타이머를 조작하도록 등록
         TimerWidgetActionBus.handler = self
+        showCompletionPopup = false
         // 완료(00:00) 상태에서 다시 시작하면 처음부터
         if isFinished {
             state = .idle
@@ -272,6 +289,7 @@ class TimerController: ObservableObject {
 
     // 멈추기
     func stop() {
+        showCompletionPopup = false
         state = .idle
         phase = .time
         stopTicker()
@@ -342,7 +360,15 @@ class TimerController: ObservableObject {
         state = .paused(remainig: 0)
         stopTicker()
         refreshLiveActivity()
+        showCompletionPopup = true
+        FeedbackService.shared.workoutComplete()
         onEnded?()
+    }
+
+    /// 지금 진행 중인 페이즈가 끝나면 전체 완료가 되는가 (완료 전용 사운드 분기용)
+    private var isOnFinalPhase: Bool {
+        if isCustomMode { return stepIndex >= customSteps.count - 1 }
+        return phase == .rest && setIndex >= totalSets
     }
 
     /// 모든 세트/단계를 마친 완료(00:00) 상태인가.
@@ -384,7 +410,7 @@ class TimerController: ObservableObject {
         if phase == .time {
             onPhaseEnded?(.time)
             phase = .rest
-            switch SettingManager.shared.autoMode {
+            switch effectiveAutoMode {
             case .fullAuto, .setAuto:
                 logger.d("autoMode .fullAuto")
                 startPhase(restSec)
@@ -400,7 +426,7 @@ class TimerController: ObservableObject {
                 onPhaseEnded?(.rest)
                 setIndex += 1
                 phase = .time
-                switch SettingManager.shared.autoMode {
+                switch effectiveAutoMode {
                 case .fullAuto:
                     logger.d("autoMode .fullAuto")
                     startPhase(timeSec)
@@ -435,7 +461,10 @@ class TimerController: ObservableObject {
         case 3, 2, 1:
             FeedbackService.shared.countdownTick()    //  1초도 여기 포함
         case 0:
-            FeedbackService.shared.phaseEndDouble()     //  0초는 긴 거
+            // 마지막 페이즈의 0초는 finishAllSets()에서 완료 사운드가 울리므로 여기선 스킵
+            if !isOnFinalPhase {
+                FeedbackService.shared.phaseEndDouble()     //  0초는 긴 거
+            }
         default:
             break
         }
@@ -464,6 +493,7 @@ class TimerController: ObservableObject {
     /// 짧은 시간 안에 한 번 더 누르면 세트 전체(1세트 / 첫 단계)로 초기화한다.
     /// 어떤 상태에서든 항상 동작한다 (기존 previousSet은 1세트에서 아무 반응이 없었다).
     func rewind() {
+        showCompletionPopup = false
         let now = Date()
         let isSecondTap = lastRewindAt.map {
             now.timeIntervalSince($0) < Self.rewindDoubleTapWindow
@@ -754,7 +784,10 @@ extension TimerController {
             return Timeline(segments: segments, terminal: .done(lastSet: ordinal))
         }
 
-        let mode = SettingManager.shared.autoMode
+        let mode = effectiveAutoMode
+        // 무한 반복은 fullAuto가 차단되어 항상 pause 지점에서 끝나지만,
+        // 로직이 바뀌어도 무한 루프에 빠지지 않도록 안전망으로 구간 수를 제한한다
+        let maxSegments = isInfiniteSets ? 31 : Int.max
 
         var segments: [Seg] = []
         var curPhase = phase
@@ -763,6 +796,9 @@ extension TimerController {
         segments.append(Seg(phase: curPhase, setIndex: curSet, start: Date(), end: curEnd))
 
         while true {
+            if segments.count >= maxSegments {
+                return Timeline(segments: segments, terminal: .done(lastSet: curSet))
+            }
             if curPhase == .time {
                 // time 종료 → rest (manual이면 여기서 멈춤)
                 guard mode == .fullAuto || mode == .setAuto else {
@@ -840,6 +876,8 @@ extension TimerController {
         let now = Date()
         guard now >= firstEnd else { return }   // 현재 페이즈 진행 중이면 그대로 둔다
 
+        // 무한 반복도 fullAuto가 차단되어 세트 경계에서 멈추므로,
+        // 사이클을 통째로 건너뛰는 보정 없이 타임라인만 따라가면 된다
         let timeline = buildTimeline(firstEnd: firstEnd)
 
         if let seg = timeline.segments.first(where: { now < $0.end }) {

@@ -13,6 +13,7 @@ class RTimerProgram: Object, ObjectKeyIdentifiable {
     @Persisted var title: String = ""
     @Persisted var createdAt: Date = Date()
     @Persisted var steps: List<RStep>
+    @Persisted var infiniteSets: Bool = false   // 세트 무한 반복 (steps는 time/rest 한 쌍만 저장)
 }
 
 class RStep: EmbeddedObject {
@@ -36,11 +37,13 @@ extension RTimerProgram {
             list.append(rs)
         }
         self.steps = list
+        self.infiniteSets = p.infiniteSets
     }
 
     func toModel() -> TimerModel {
         TimerModel(
             title: title,
+            infiniteSets: infiniteSets,
             steps: steps.map {
                 TimerModel.Step(kind: .init(rawValue: $0.kindRaw) ?? .time,
                                 seconds: $0.seconds,
@@ -55,7 +58,7 @@ struct ProgramStore {
     
     static func open() throws -> ProgramStore {
         let config = Realm.Configuration(
-            schemaVersion: 2) { _, _ in
+            schemaVersion: 6) { _, _ in
                 logger.d("migration nothing")
             }
         return try ProgramStore(realm: Realm(configuration: config))
@@ -80,6 +83,7 @@ struct ProgramStore {
         if let id, let target = realm.object(ofType: RTimerProgram.self, forPrimaryKey: id) {
             try realm.write {
                 target.title = program.title
+                target.infiniteSets = program.infiniteSets
                 target.steps.removeAll()
                 program.steps.forEach { s in
                     let rs = RStep()

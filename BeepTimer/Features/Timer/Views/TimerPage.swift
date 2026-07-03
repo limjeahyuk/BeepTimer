@@ -92,7 +92,7 @@ final class TimerControllerStore: ObservableObject {
             time = model.steps.first { $0.kind == .time }?.seconds ?? 30
             rest = model.steps.first { $0.kind == .rest }?.seconds ?? 0
         }
-        let sets = max(1, model.setsCount)
+        let sets = model.infiniteSets ? TimerController.infiniteSets : max(1, model.setsCount)
 
         if onlyIfChanged,
            c.timerTitle == model.title, !c.isCustomMode,
@@ -107,6 +107,7 @@ final class TimerControllerStore: ObservableObject {
 
 struct TimerPager: View {
     @StateObject private var store = TimerControllerStore()
+    @ObservedObject private var customArea = CustomAreaState.shared
     @Environment(\.scenePhase) var scenePhase
 
     @ObservedResults(RTimerProgram.self,
@@ -126,13 +127,15 @@ struct TimerPager: View {
             } else {
                 TabView(selection: $page) {
                     ForEach(Array(programs.enumerated()), id: \.element._id) { idx, p in
-                        ContentView()
+                        ContentView(programId: p._id)
                             .environmentObject(store.controller(for: p))
                             .tag(idx)
                             .onTapGesture { hideKeyboard() }
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                // 그림 메모가 열려 있는 동안엔 그리는 손짓이 페이지 넘김으로 새지 않도록
+                .scrollDisabled(customArea.isOpen)
             }
 
             // 상단 바: 리스트 / 페이지 인디케이터 / +
@@ -204,6 +207,33 @@ struct TimerPager: View {
             }
         }
         .onAppear {
+            #if DEBUG
+            // 개발용: 실행 인자로 타이머 목록을 바로 연다 (simctl launch ... -openLibrary)
+            if ProcessInfo.processInfo.arguments.contains("-openLibrary") {
+                showLibrary = true
+            }
+            // 개발용: 샘플 타이머 채우기 (simctl launch ... -seedTimers)
+            if ProcessInfo.processInfo.arguments.contains("-seedTimers"),
+               programs.isEmpty,
+               let realm = try? Realm() {
+                try? realm.write {
+                    for (title, time, rest, sets) in [("Timer3", 41, 87, 1),
+                                                      ("길이가아주긴타이머", 30, 15, 3),
+                                                      ("운동", 17, 3, 5)] {
+                        let p = RTimerProgram()
+                        p.title = title
+                        p.createdAt = Date()
+                        for _ in 0..<sets {
+                            let t = RStep(); t.kindRaw = "time"; t.seconds = time
+                            let r = RStep(); r.kindRaw = "rest"; r.seconds = rest
+                            p.steps.append(t)
+                            p.steps.append(r)
+                        }
+                        realm.add(p)
+                    }
+                }
+            }
+            #endif
             if programs.isEmpty {
                 let c = TimerController.shared
                 if let last = c.loadLastUsed() {
@@ -270,6 +300,8 @@ struct TimerPager: View {
                 if case .idle = controller.state { controller.start() }
             case "open":
                 break   // 앱만 열기
+            case "library":
+                showLibrary = true   // 타이머 목록 열기
             default:
                 break
             }

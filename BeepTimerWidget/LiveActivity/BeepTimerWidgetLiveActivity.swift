@@ -274,7 +274,7 @@ struct BeepTimerWidgetLiveActivity: Widget {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(context.state.setIndex)/\(context.state.totalSets)")
+                        Text(context.state.setCountText)
                             .font(.subheadline.weight(.semibold))
                         Text(mode == .time ? "Time" : "Rest")
                             .font(.caption2)
@@ -297,7 +297,7 @@ struct BeepTimerWidgetLiveActivity: Widget {
                         TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("\(context.state.setIndex)/\(context.state.totalSets)")
+                            Text(context.state.setCountText)
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
 

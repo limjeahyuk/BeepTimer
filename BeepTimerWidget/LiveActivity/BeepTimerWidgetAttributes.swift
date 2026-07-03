@@ -24,6 +24,11 @@ public struct BeepTimerWidgetAttributes: ActivityAttributes {
         public var setIndex: Int
         public var totalSets: Int
 
+        /// "1/3" 또는 무한 반복(Int.max)이면 "1/∞"
+        public var setCountText: String {
+            totalSets == Int.max ? "\(setIndex)/∞" : "\(setIndex)/\(totalSets)"
+        }
+
         public init(phase: String, status: String, startTime: Date, endTime: Date, remainSec: Int?, setIndex: Int, totalSets: Int) {
             self.phase = phase
             self.status = status

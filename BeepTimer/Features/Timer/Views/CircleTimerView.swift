@@ -54,48 +54,56 @@ struct CircleTimerView: View {
             
             let ringRotation: Double = 90
 
-            ZStack {
+            // 실제 렌더링된 크기 기준으로 내부 요소 크기를 계산해야
+            // 작은 화면에서 원이 축소돼도 글자가 넘치거나 겹치지 않는다
+            GeometryReader { geo in
+                let side = min(geo.size.width, geo.size.height)
+                let ring = min(ringWidth, side * 0.11)
+
                 ZStack {
-                    Circle()
-                        .trim(from: rightEdge, to: leftEdge)
-                        .stroke(trackColor, style: .init(lineWidth: ringWidth, lineCap: .round))
-                    
-                    let end = rightEdge + allowed * fill
-                    Circle()
-                        .trim(from: rightEdge, to: end)
-                        .stroke(progressColor, style: .init(lineWidth: ringWidth, lineCap: .round))
-                }
-                .rotationEffect(.degrees(ringRotation))
-                .animation(nil, value: controller.phase)
-                
-                // ===== 중앙 타이머 텍스트 =====
-                Text(clockString(remaining))
-                    .font(.system(size: max(42, ringWidth * 3), weight: .bold, design: .rounded))
-                    .foregroundStyle(TimerColor.textPrimary)
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.5)
-                    .allowsTightening(true)
-                    .contentTransition(.numericText())
-                    
-                VStack{
-                    Text(controller.phaseLabel)
-                        .font(.system(size: max(12, ringWidth * 1.5), weight: .bold, design: .rounded))
-                        .foregroundStyle(controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest)
+                    ZStack {
+                        Circle()
+                            .trim(from: rightEdge, to: leftEdge)
+                            .stroke(trackColor, style: .init(lineWidth: ring, lineCap: .round))
+
+                        let end = rightEdge + allowed * fill
+                        Circle()
+                            .trim(from: rightEdge, to: end)
+                            .stroke(progressColor, style: .init(lineWidth: ring, lineCap: .round))
+                    }
+                    .rotationEffect(.degrees(ringRotation))
+                    .animation(nil, value: controller.phase)
+
+                    // ===== 중앙 타이머 텍스트 =====
+                    Text(clockString(remaining))
+                        .font(.system(size: side * 0.19, weight: .bold, design: .rounded))
+                        .foregroundStyle(TimerColor.textPrimary)
                         .monospacedDigit()
-                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
                         .allowsTightening(true)
                         .contentTransition(.numericText())
-                        .padding(.top, ringWidth + 15)
-                    
-                    Spacer()
-                    
-                    Image(systemName: controller.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: ringWidth * 2.2, weight: .bold))
-                        .foregroundStyle(.white)
-                    
-                    
+                        .frame(maxWidth: side - ring * 2 - 24)
+
+                    VStack {
+                        Text(controller.phaseLabel)
+                            .font(.system(size: side * 0.085, weight: .bold, design: .rounded))
+                            .foregroundStyle(controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .allowsTightening(true)
+                            .contentTransition(.numericText())
+                            .padding(.top, ring + side * 0.05)
+
+                        Spacer()
+
+                        Image(systemName: controller.isRunning ? "pause.fill" : "play.fill")
+                            .font(.system(size: side * 0.12, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
                 }
-                
+                .frame(width: geo.size.width, height: geo.size.height)
             }
             .onChange(of: p) { _ in controller.tryFireEndIfNeeded() }
             .onChange(of: remaining) { newRemaining in

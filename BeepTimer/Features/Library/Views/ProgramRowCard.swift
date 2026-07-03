@@ -14,13 +14,22 @@ struct ProgramRowCard: View {
     let onDelete: () -> Void
     let onDuplicate: (RTimerProgram) -> Void
     @State private var expanded = false
+    @State private var editingField: EditingField?
+    @State private var keypadField: EditingField?
     var isActive: Bool = false
-    
+
+    private enum EditingField: Identifiable {
+        case time, rest, sets
+        var id: Self { self }
+    }
+
+    private let accent = Color(hex: "#22D3EE")
+
     func mmss(_ sec: Int) -> String {
         let s = max(0, sec)
         let m = s / 60
         let ss = s % 60
-        return String(format: "%02d : %02d", m, ss)
+        return String(format: "%02d:%02d", m, ss)
     }
     
     func nextCloneTitle(base: String) -> String {
@@ -42,12 +51,10 @@ struct ProgramRowCard: View {
             header
             if expanded {
                 expandedEditor
-                    .padding(.top, 12)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
             }
         }
-        .contentShape(Rectangle())
-        .padding(.vertical, 16)
-        .padding(.horizontal, 16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.white.opacity(isActive ? 0.10 : 0.05))
@@ -68,20 +75,19 @@ struct ProgramRowCard: View {
         } label: {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
+                        if isActive {
+                            Circle()
+                                .fill(accent)
+                                .frame(width: 7, height: 7)
+                        }
+
                         Text(program.title)
                             .font(.fromCSSFont(17, weight: .bold))
                             .foregroundStyle(TimerColor.textPrimary)
                             .lineLimit(1)
-
-                        if isActive {
-                            Text("사용 중")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color(hex: "#22D3EE"))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(Color(hex: "#22D3EE").opacity(0.15)))
-                        }
+                            .truncationMode(.tail)
+                            .layoutPriority(1)
 
                         Image(systemName: expanded ? "chevron.up" : "chevron.down")
                             .font(.system(size: 11, weight: .bold))
@@ -89,22 +95,29 @@ struct ProgramRowCard: View {
                     }
 
                     HStack(spacing: 6) {
-                        statChip(icon: "timer", text: mmss(firstTimeSec))
-                        statChip(icon: "pause.circle", text: mmss(firstRestSec))
-                        statChip(icon: "repeat", text: "\(setCount)")
+                        statChip(icon: "repeat", text: program.infiniteSets ? "∞" : "\(setCount)")
+                        statChip(icon: "clock", text: program.infiniteSets ? "∞" : mmss(totalSec))
                     }
                 }
+                // Spacer보다 먼저 폭을 차지해야 여백이 남아 있는데 제목이 잘리는 일이 없다
+                .layoutPriority(1)
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(mmss(totalSec))
-                        .font(.fromCSSFont(16, weight: .bold))
+                    // 재생을 누르면 바로 시작되는 운동 시간
+                    Text(mmss(firstTimeSec))
+                        .font(.fromCSSFont(20, weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(TimerColor.textPrimary)
-                    Text("총 시간")
-                        .font(.system(size: 10, weight: .medium))
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text("휴식 \(mmss(firstRestSec))")
+                        .font(.system(size: 11, weight: .medium))
+                        .monospacedDigit()
                         .foregroundStyle(TimerColor.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
 
                 Button {
@@ -114,10 +127,12 @@ struct ProgramRowCard: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 40, height: 40)
-                        .background(Circle().fill(Color(hex: "#22D3EE").opacity(0.85)))
+                        .background(Circle().fill(accent.opacity(0.85)))
                 }
                 .buttonStyle(.plain)
             }
+            .padding(16)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -130,6 +145,8 @@ struct ProgramRowCard: View {
                 .font(.system(size: 12, weight: .semibold))
                 .monospacedDigit()
         }
+        .lineLimit(1)
+        .fixedSize()
         .foregroundStyle(TimerColor.textSecondary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
@@ -137,164 +154,197 @@ struct ProgramRowCard: View {
     }
 
     private var expandedEditor: some View {
-                VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Title")
-                            .font(.caption)
-                            .foregroundStyle(TimerColor.textSecondary)
-                        
-                        TextField("Title", text: $program.title)
-                            .textFieldStyle(.plain)
-                            .padding(10)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            .foregroundStyle(TimerColor.textPrimary)
-                            .disableAutocorrection(true)
+        VStack(alignment: .leading, spacing: 14) {
+            // 이름
+            VStack(alignment: .leading, spacing: 6) {
+                Text("이름")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(TimerColor.textSecondary)
+
+                TextField("타이머 이름", text: $program.title)
+                    .textFieldStyle(.plain)
+                    .font(.fromCSSFont(16, weight: .semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 11)
+                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .foregroundStyle(TimerColor.textPrimary)
+                    .disableAutocorrection(true)
+            }
+
+            // 시간 구성 (탭하여 수정)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("시간 구성")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(TimerColor.textSecondary)
+
+                VStack(spacing: 0) {
+                    editRow(icon: "timer", iconColor: accent,
+                            label: "운동 시간",
+                            value: mmss(representativeSeconds(kind: "time")),
+                            mixed: !isUniform(kind: "time"),
+                            onLongPress: { keypadField = .time }) {
+                        editingField = .time
                     }
-                    
-                    VStack(alignment: .leading, spacing: 6){
-                        
-                        Text("Setting")
-                            .font(.caption)
-                            .foregroundStyle(TimerColor.textSecondary)
-                        
-                        HStack(spacing: 8) {
-                            // Time
-                            TimeFieldButton(
-                                title: "Time \(isUniform(kind: "time") ? "" : " • mixed")",
-                                seconds: bindingForKind("time"),
-                                minSeconds: 1,
-                                maxSeconds: 59*60+59
-                            )
-                            
-                            // Rest
-                            TimeFieldButton(
-                                title: "Rest \(isUniform(kind: "rest") ? "" : " • mixed")",
-                                seconds: bindingForKind("rest"),
-                                minSeconds: 0,
-                                maxSeconds: 59*60+59
-                            )
-                            
-                            Spacer()
-                            
-                        }
-                        HStack(spacing: 8) {
-                            // Sets
-                            SetsFieldButton(title: "Sets", sets: setsBinding, minSets: 1, maxSets: 99)
-                            
-                            Spacer()
-                        }
+                    rowDivider
+                    editRow(icon: "pause.circle.fill", iconColor: .orange,
+                            label: "휴식 시간",
+                            value: mmss(representativeSeconds(kind: "rest")),
+                            mixed: !isUniform(kind: "rest"),
+                            onLongPress: { keypadField = .rest }) {
+                        editingField = .rest
                     }
-                    
-                    HStack(spacing: 12) {
-                        
-                        
-                        Button {
-                            // 간단 복제
-                            let clone = RTimerProgram()
-                            clone.title = nextCloneTitle(base: program.title)
-                            clone.createdAt = Date()
-                            let list = RealmSwift.List<RStep>()
-                            for s in program.steps {
-                                let c = RStep()
-                                c.kindRaw = s.kindRaw
-                                c.seconds = s.seconds
-                                list.append(c)
-                            }
-                            
-                            clone.steps = list
-                            
-                            onDuplicate(clone)
-                        } label: {
-                            Label("Duplicate", systemImage: "doc.on.doc")
-                                .font(.system(size: 15, weight: .semibold))
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 14)
-                                .background(Color.white.opacity(0.08), in: Capsule())
-                        }
-                        
-                        Button(role: .destructive) {
-                            onDelete()
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.fromCSSFont(16, weight: .bold))
-                                .padding(10)
-                                .background(Color.red.opacity(0.18), in: Circle())
-                        }
-                        
-                        Spacer()
-                        
-                        
-                        Button {
-                            onStart()
-                        } label: {
-                            Label("Start", systemImage: "play.fill")
-                                .font(.fromCSSFont(15, weight: .semibold))
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 14)
-                                .background(TimerColor.ringTime.opacity(0.22), in: Capsule())
-                        }
+                    rowDivider
+                    editRow(icon: "repeat", iconColor: .green,
+                            label: "세트",
+                            value: program.infiniteSets ? "∞" : "\(currentSets())") {
+                        editingField = .sets
                     }
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
-    }
-}
-
-struct TimeFieldButton: View {
-    let title: String              // "Time", "Rest"
-    @Binding var seconds: Int      // 총 초
-    var minSeconds: Int = 0
-    var maxSeconds: Int = 59*60+59 // 59:59 까지 예시 (필요 시 늘리세요)
-
-    @State private var showSheet = false
-    @State private var showKeypad = false
-
-    var body: some View {
-        Button {
-            showSheet = true
-        } label: {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.fromCSSFont(14, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text(mmss(seconds))
-                    .font(.fromCSSFont(18, weight: .bold))
-                    .monospacedDigit()
-                    .foregroundStyle(.primary)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        }
-        // 길게 누르면 숫자 키패드
-        .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
-            showKeypad = true
-        })
-        .sheet(isPresented: $showSheet) {
-            TimePickerSheet(
-                initialSeconds: seconds,
-                minSeconds: minSeconds,
-                maxSeconds: maxSeconds
-            ) { newValue in
-                seconds = newValue
+
+            // 액션
+            HStack(spacing: 10) {
+                Button {
+                    // 간단 복제
+                    let clone = RTimerProgram()
+                    clone.title = nextCloneTitle(base: program.title)
+                    clone.createdAt = Date()
+                    let list = RealmSwift.List<RStep>()
+                    for s in program.steps {
+                        let c = RStep()
+                        c.kindRaw = s.kindRaw
+                        c.seconds = s.seconds
+                        list.append(c)
+                    }
+
+                    clone.steps = list
+                    clone.infiniteSets = program.infiniteSets
+
+                    onDuplicate(clone)
+                } label: {
+                    Label("복제", systemImage: "doc.on.doc")
+                        .font(.system(size: 14, weight: .semibold))
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 14)
+                        .background(Color.white.opacity(0.08), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(TimerColor.textPrimary)
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.red)
+                        .frame(width: 38, height: 38)
+                        .background(Color.red.opacity(0.15), in: Circle())
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button {
+                    onStart()
+                } label: {
+                    Label("시작", systemImage: "play.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(accent)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+                        .background(accent.opacity(0.18), in: Capsule())
+                }
+                .buttonStyle(.plain)
             }
-            .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showKeypad) {
-            TimeKeypadSheet(
-                initialSeconds: seconds,
-                minSeconds: minSeconds,
-                maxSeconds: maxSeconds
-            ) { newValue in
-                seconds = newValue
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .sheet(item: $editingField) { field in
+            switch field {
+            case .time:
+                TimePickerSheet(initialSeconds: representativeSeconds(kind: "time"),
+                                minSeconds: 1, maxSeconds: 59*60+59) { newValue in
+                    bindingForKind("time").wrappedValue = newValue
+                }
+                .presentationDetents([.medium])
+            case .rest:
+                TimePickerSheet(initialSeconds: representativeSeconds(kind: "rest"),
+                                minSeconds: 0, maxSeconds: 59*60+59) { newValue in
+                    bindingForKind("rest").wrappedValue = newValue
+                }
+                .presentationDetents([.medium])
+            case .sets:
+                SetsPickerSheet(title: "세트", initial: currentSets(),
+                                minSets: 1, maxSets: 99) { newValue in
+                    setsBinding.wrappedValue = newValue
+                }
+                .presentationDetents([.medium])
+            }
+        }
+        // 시간/휴식 행을 길게 누르면 숫자 키패드로 직접 입력
+        .sheet(item: $keypadField) { field in
+            let kind = (field == .time) ? "time" : "rest"
+            TimeKeypadSheet(initialSeconds: representativeSeconds(kind: kind),
+                            minSeconds: field == .time ? 1 : 0,
+                            maxSeconds: 59*60+59) { newValue in
+                bindingForKind(kind).wrappedValue = newValue
             }
             .presentationDetents([.fraction(0.6)])
         }
-        .accessibilityLabel("\(title) \(mmss(seconds)) 설정")
     }
 
-    private func mmss(_ s: Int) -> String {
-        let m = s / 60, sec = s % 60
-        return String(format: "%02d:%02d", m, sec)
+    private func editRow(icon: String, iconColor: Color, label: String, value: String,
+                         mixed: Bool = false, onLongPress: (() -> Void)? = nil,
+                         action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 28, height: 28)
+                    .background(Circle().fill(iconColor.opacity(0.15)))
+
+                Text(label)
+                    .font(.fromCSSFont(15, weight: .medium))
+                    .foregroundStyle(TimerColor.textPrimary)
+
+                if mixed {
+                    Text("혼합")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.orange.opacity(0.15)))
+                }
+
+                Spacer()
+
+                Text(value)
+                    .font(.fromCSSFont(17, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(iconColor)
+                    .lineLimit(1)
+                    .fixedSize()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(TimerColor.textSecondary.opacity(0.6))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+            onLongPress?()
+        })
+    }
+
+    private var rowDivider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.07))
+            .frame(height: 1)
+            .padding(.leading, 50)
     }
 }
 
@@ -507,6 +557,7 @@ extension ProgramRowCard {
         let restSec = representativeSeconds(kind: "rest")
 
         try? realm.write {
+            thawed.infiniteSets = false   // 세트 수를 직접 정하면 무한 반복 해제
             if newCount > old {
                 for _ in old..<newCount {
                     thawed.steps.append(makeStep(kind: "time", seconds: timeSec))
@@ -531,79 +582,18 @@ extension ProgramRowCard {
     }
 }
 
-struct SetsFieldButton: View {
-    let title: String
-    @Binding var sets: Int
-    var minSets: Int = 1
-    var maxSets: Int = 99
-
-    @State private var showSheet = false
-    @State private var startSets: Int = 0
-    @GestureState private var dragOffset: CGFloat = .zero
-
-    // 드래그 민감도: 가로 18pt당 1증감(원하는 감도로 조정)
-    private let ptPerStep: CGFloat = 18
-
-    var body: some View {
-        let drag = DragGesture(minimumDistance: 0)
-            .updating($dragOffset) { value, state, _ in
-                state = value.translation.width
-            }
-            .onChanged { value in
-                // 드래그 양에 따라 증감
-                let delta = Int(value.translation.width / ptPerStep)
-                let newVal = clamp(startSets + delta, minSets, maxSets)
-                if newVal != sets {
-                    sets = newVal
-                }
-            }
-            .onEnded { _ in
-                startSets = sets
-            }
-
-        Button {
-            startSets = sets
-            showSheet = true
-        } label: {
-            HStack(spacing: 6) {
-                Text("\(title) \(sets)")
-                    .font(.fromCSSFont(14, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .onAppear { startSets = sets }
-        .sensoryFeedback(.selection, trigger: sets) // 촉각 피드백
-        .sheet(isPresented: $showSheet) {
-            SetsPickerSheet(
-                title: title,
-                initial: sets,
-                minSets: minSets,
-                maxSets: maxSets
-            ) { newVal in
-                sets = newVal
-            }
-            .presentationDetents([.medium])
-        }
-        .accessibilityLabel("\(title) \(sets) 설정")
-    }
-
-    private func clamp(_ v: Int, _ lo: Int, _ hi: Int) -> Int { max(lo, min(hi, v)) }
-}
-
-
 struct SetsPickerSheet: View {
     let title: String
     let initial: Int
     let minSets: Int
     let maxSets: Int
+    var allowInfinite: Bool = false   // 맨 아래 "∞ 무한 반복" 옵션 노출
     let onDone: (Int) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var value: Int = 1
+
+    private var isInfinite: Bool { value == TimerController.infiniteSets }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -622,18 +612,32 @@ struct SetsPickerSheet: View {
                 ForEach(minSets...maxSets, id: \.self) { v in
                     Text("\(v) 세트").tag(v)
                 }
+                if allowInfinite {
+                    Text("∞ 무한 반복").tag(TimerController.infiniteSets)
+                }
             }
             .pickerStyle(.wheel)
             .frame(height: 180)
 
-            Text("\(value) Sets")
+            Text(isInfinite ? "∞ Sets" : "\(value) Sets")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .padding(.top, 4)
+
+            if isInfinite {
+                Text("세트가 끝나지 않고 계속 반복해요. 전체 자동(Auto) 모드는 사용할 수 없어 세트가 끝날 때마다 멈춥니다.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
 
             Spacer(minLength: 8)
         }
         .padding(16)
-        .onAppear { value = clamp(initial, minSets, maxSets) }
+        .onAppear {
+            value = (allowInfinite && initial == TimerController.infiniteSets)
+                ? initial
+                : clamp(initial, minSets, maxSets)
+        }
     }
 
     private func clamp(_ v: Int, _ lo: Int, _ hi: Int) -> Int { max(lo, min(hi, v)) }

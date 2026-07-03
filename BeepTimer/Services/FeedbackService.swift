@@ -51,5 +51,19 @@ final class FeedbackService {
         }
         AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
     }
+
+    /// 전체 세트 완료: 3연타 긴 소리 + 진동 2번 (페이즈 종료음과 구분)
+    func workoutComplete() {
+        configureIfNeeded()
+        AudioServicesPlaySystemSound(1013)
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            AudioServicesPlaySystemSound(1013)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            AudioServicesPlaySystemSound(1013)
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        }
+    }
 }
 
