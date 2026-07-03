@@ -237,7 +237,7 @@ struct TimerPager: View {
             case .background:
                 // 백그라운드로 갈 때: 모든 실행 중 타이머의 Live Activity 동기화 + 페이즈 알림 예약
                 logger.d("background scene phase")
-                for c in store.allControllers {
+                for c in backgroundControllers {
                     c.isInBackground = true
                     c.scheduleBackgroundNotifications()
                     Task { await c.syncLiveActivityForCurrentState() }
@@ -245,7 +245,7 @@ struct TimerPager: View {
             case .active:
                 // 복귀: 예약 알림 취소 + 백그라운드에서 흘러간 만큼 상태 보정
                 logger.d("active ground scene ")
-                for c in store.allControllers {
+                for c in backgroundControllers {
                     c.isInBackground = false
                     Task { await c.handleReturnToForeground() }
                 }
@@ -277,6 +277,12 @@ struct TimerPager: View {
     }
 
     // MARK: - 현재 페이지
+
+    /// 백그라운드 진입/복귀 처리 대상 컨트롤러 전부.
+    /// 기본 타이머(shared)는 store에 없으므로 빠뜨리면 백그라운드 알림이 예약되지 않는다.
+    private var backgroundControllers: [TimerController] {
+        store.allControllers + [TimerController.shared]
+    }
 
     private var currentController: TimerController {
         guard page >= 0, page < programs.count else { return TimerController.shared }

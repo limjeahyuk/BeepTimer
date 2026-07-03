@@ -94,7 +94,10 @@ struct BeepTimerWidgetEntryView: View {
     private var bigValue: some View {
         if snap.isActive {
             if let end = snap.endTime, !snap.isPaused {
-                Text(end, style: .timer)
+                // style: .timer는 end가 지나면 카운트업으로 바뀌므로 timerInterval로 00:00에 고정
+                let start = min(snap.startTime ?? entry.date, end)
+                Text(timerInterval: start...end, countsDown: true)
+                    .multilineTextAlignment(.leading)
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(TimerColor.textPrimary)

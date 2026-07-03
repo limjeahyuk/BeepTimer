@@ -20,6 +20,7 @@ struct TimerWidgetSnapshot: Codable, Equatable {
     var isActive: Bool        // running 또는 paused (= Live Activity가 떠 있는 상태)
     var phaseIsRest: Bool     // 현재 페이즈가 휴식인가
     var setIndex: Int
+    var startTime: Date? = nil // running일 때 현재 페이즈 시작시각 (timerInterval 렌더링용)
     var endTime: Date?        // running일 때 카운트다운 종료시각
     var isPaused: Bool
     var pausedRemain: Int?    // paused일 때 남은 초

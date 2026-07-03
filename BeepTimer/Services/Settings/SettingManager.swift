@@ -17,17 +17,25 @@ enum AutoPlayMode: Int, CaseIterable, Identifiable {
 
 enum TimerSettingKey {
     static let autoMode = "Timer_Auto_Mode"
+    static let phaseAlarm = "Timer_Phase_Alarm"
 }
 
 class SettingManager: ObservableObject {
     static let shared = SettingManager()
-    
+
     @Published var autoMode: AutoPlayMode {
         didSet {
             UserDefaults.standard.set(autoMode.rawValue, forKey: TimerSettingKey.autoMode)
         }
     }
-    
+
+    /// 백그라운드에서 운동/휴식이 끝날 때 소리·배너 알림을 보낼지 여부
+    @Published var phaseAlarmEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(phaseAlarmEnabled, forKey: TimerSettingKey.phaseAlarm)
+        }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: TimerSettingKey.autoMode) == nil {
@@ -35,5 +43,10 @@ class SettingManager: ObservableObject {
         }
         let raw = defaults.integer(forKey: TimerSettingKey.autoMode)
         autoMode = AutoPlayMode(rawValue: raw) ?? .fullAuto
+
+        if defaults.object(forKey: TimerSettingKey.phaseAlarm) == nil {
+            defaults.set(true, forKey: TimerSettingKey.phaseAlarm)
+        }
+        phaseAlarmEnabled = defaults.bool(forKey: TimerSettingKey.phaseAlarm)
     }
 }

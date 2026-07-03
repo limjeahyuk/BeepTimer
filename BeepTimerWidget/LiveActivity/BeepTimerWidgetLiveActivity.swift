@@ -34,6 +34,11 @@ private func modeAndStatus(
     return (mode, status)
 }
 
+/// 다이나믹 아일랜드/잠금화면 페이즈 색 — 운동 중엔 파란색, 휴식 중엔 초록색
+private extension TimerPhaseMode {
+    var tint: Color { self == .time ? .blue : .green }
+}
+
 struct TimerPhaseRingIcon: View {
     let mode: TimerPhaseMode      // .time / .rest
     let status: TimerPhaseStatus  // .running / .paused / .done
@@ -54,12 +59,7 @@ struct TimerPhaseRingIcon: View {
         .foregroundColor(.white)
     }
 
-    private var ringColor: Color {
-        switch mode {
-        case .time: return TimerColor.ringTime
-        case .rest: return TimerColor.ringRest
-        }
-    }
+    private var ringColor: Color { mode.tint }
 
     // done 되자마자 mode가 변경되어버려서 다음 링 색상이 되어버립니다.
     private var doneColor: Color {
@@ -67,8 +67,8 @@ struct TimerPhaseRingIcon: View {
             return .red
         }else {
             switch mode {
-            case .time: return TimerColor.ringRest
-            case .rest: return TimerColor.ringTime
+            case .time: return TimerPhaseMode.rest.tint
+            case .rest: return TimerPhaseMode.time.tint
             }
         }
     }
@@ -91,18 +91,68 @@ struct TimerPhaseRingIcon: View {
     }
 }
 
+// MARK: - minimal(작은 원) 뷰
+
+/// minimal 상태(다른 앱과 아일랜드를 나눠 쓰는 작은 원).
+/// Live Activity는 임의 시점(T-5초)에 뷰를 다시 그릴 수 없고, minimal에서는
+/// mask 기반 꼼수도 동작하지 않아 "마지막 5초 숫자 카운트다운"은 표시할 수 없다.
+/// 대신 실행 중엔 빨간 링 + 페이즈 아이콘, 종료 시 멈춤 아이콘을 보여준다.
+private struct MinimalIslandView: View {
+    let mode: TimerPhaseMode
+    let status: TimerPhaseStatus
+
+    var body: some View {
+        ZStack {
+            iconImage
+                .font(.system(size: 12, weight: .bold))
+
+            Circle()
+                .strokeBorder(lineWidth: 2)
+                .foregroundColor(ringColor)
+        }
+        .frame(width: 25, height: 25)
+        .foregroundColor(.white)
+    }
+
+    private var ringColor: Color {
+        switch status {
+        case .running: return .red
+        case .paused:  return mode.tint
+        case .done:    return .red
+        }
+    }
+
+    @ViewBuilder
+    private var iconImage: some View {
+        switch status {
+        case .paused:
+            Image(systemName: "pause.fill")
+        case .running:
+            Image(systemName: mode == .time ? "figure.run" : "figure.mind.and.body")
+        case .done:
+            Image(systemName: "stop.fill")
+        }
+    }
+}
+
 // MARK: - 남은 시간 / 상태 텍스트
 
 /// running이면 카운트다운(.timer), paused면 고정된 남은 시간, done이면 "완료"
 private struct TimerCountdownText: View {
     let state: BeepTimerWidgetAttributes.ContentState
     let status: TimerPhaseStatus
+    var tint: Color = .primary
 
     var body: some View {
         switch status {
         case .running:
-            Text(state.endTime, style: .timer)
+            // style: .timer는 endTime이 지나면 카운트업으로 바뀌므로,
+            // timerInterval + countsDown으로 00:00에서 멈추게 한다.
+            Text(timerInterval: min(state.startTime, state.endTime)...state.endTime,
+                 countsDown: true)
                 .monospacedDigit()
+                .multilineTextAlignment(.leading)
+                .foregroundColor(tint)
         case .paused:
             Text(mmss(state.remainSec ?? 0))
                 .monospacedDigit()
@@ -110,6 +160,37 @@ private struct TimerCountdownText: View {
         case .done:
             Text("완료")
                 .foregroundColor(.secondary)
+        }
+    }
+}
+
+// MARK: - compact leading (다이나믹 아일랜드 왼쪽 원)
+
+/// running이면 남은 시간에 따라 줄어드는 원형 프로그레스 링(운동=파랑, 휴식=초록),
+/// 그 외에는 기존 아이콘 링을 보여준다.
+private struct CompactPhaseRing: View {
+    let state: BeepTimerWidgetAttributes.ContentState
+    let mode: TimerPhaseMode
+    let status: TimerPhaseStatus
+    let isAllDone: Bool
+
+    var body: some View {
+        if status == .running, state.endTime > Date() {
+            ProgressView(
+                timerInterval: min(state.startTime, state.endTime)...state.endTime,
+                countsDown: true
+            ) {
+                EmptyView()
+            } currentValueLabel: {
+                Image(systemName: mode == .time ? "figure.run" : "figure.mind.and.body")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .progressViewStyle(.circular)
+            .tint(mode.tint)
+            .frame(width: 25, height: 25)
+        } else {
+            TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
         }
     }
 }
@@ -197,7 +278,7 @@ struct BeepTimerWidgetLiveActivity: Widget {
                             .font(.subheadline.weight(.semibold))
                         Text(mode == .time ? "Time" : "Rest")
                             .font(.caption2)
-                            .foregroundColor(mode == .time ? TimerColor.ringTime : TimerColor.ringRest)
+                            .foregroundColor(mode.tint)
                     }
                 }
 
@@ -247,16 +328,16 @@ struct BeepTimerWidgetLiveActivity: Widget {
                 }
 
             } compactLeading: {
-                // compact 왼쪽: 아이콘
-                TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+                // compact 왼쪽: 페이즈 색 원형 프로그레스 링 (운동=파랑, 휴식=초록)
+                CompactPhaseRing(state: context.state, mode: mode, status: status, isAllDone: isAllDone)
             } compactTrailing: {
-                // compact 오른쪽: 남은 시간만 깔끔하게
-                TimerCountdownText(state: context.state, status: status)
+                // compact 오른쪽: 남은 시간 (페이즈 색과 통일)
+                TimerCountdownText(state: context.state, status: status, tint: mode.tint)
                     .font(.system(size: 14, weight: .semibold))
                     .frame(minWidth: 44)
             } minimal: {
-                // 최소: 아이콘만
-                TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+                // 최소: 실행 중엔 빨간 링 + 페이즈 아이콘, 종료 시 멈춤 아이콘
+                MinimalIslandView(mode: mode, status: status)
             }
         }
     }

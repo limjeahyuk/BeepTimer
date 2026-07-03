@@ -67,8 +67,8 @@
 		0B5149692EC5747B00FA0595 /* Exceptions for "BeepTimerWidget" folder in "BeepTimer" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				LiveActivity/BeepTimerWidgetAttributes.swift,
 				Intents/TimerLiveActivityIntents.swift,
+				LiveActivity/BeepTimerWidgetAttributes.swift,
 				Shared/TimerWidgetSnapshot.swift,
 			);
 			target = 0B9033812E3E05DE0052F7B2 /* BeepTimer */;

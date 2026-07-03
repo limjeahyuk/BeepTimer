@@ -70,14 +70,16 @@ struct ContentView: View {
                     
                     Button {
                         logger.d("backward fill")
-                        if !controller.previousSet() {
-                            logger.d("timerController previousSet fail")
-                        }
+                        controller.rewind()
                     } label: {
                         Image(systemName: "backward.fill")
                             .resizable()
                             .frame(width: 22, height: 18)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("한 번: 현재 타이머 처음으로, 두 번: 세트 초기화")
                     
                     Spacer()
                     
@@ -108,6 +110,8 @@ struct ContentView: View {
                                 }
                             }())
                             .font(.system(size: 9, weight: .semibold))
+                            .lineLimit(1)
+                            .fixedSize()
                         }
                     }
                     .accessibilityLabel("자동 모드: \(settings.autoMode == .fullAuto ? "전체 자동" : settings.autoMode == .setAuto ? "세트 자동" : "수동")")
@@ -115,7 +119,7 @@ struct ContentView: View {
                     Spacer()
                     
                     Button {
-                        logger.d("backward fill")
+                        logger.d("forward fill")
                         if !controller.nextSet() {
                             logger.d("end point")
                         }
@@ -123,7 +127,10 @@ struct ContentView: View {
                         Image(systemName: "forward.fill")
                             .resizable()
                             .frame(width: 22, height: 18)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     
                 }
                 .frame(height: 48)
@@ -158,6 +165,8 @@ struct ContentView: View {
                                           value: isIdle ? "\(controller.totalSets)" : "\(controller.setIndex)/\(controller.totalSets)")
                         }
                     }
+
+                    Spacer(minLength: 0)
 
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.compact.up")
@@ -212,6 +221,7 @@ struct ContentView: View {
 
 struct TimerSettingsSheet: View {
     @ObservedObject var controller: TimerController
+    @ObservedObject private var settings = SettingManager.shared
 
     @State private var title: String = ""
     @State private var timeSec: Int = 30
@@ -306,6 +316,41 @@ struct TimerSettingsSheet: View {
                             }
                         }
                     }
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+
+                // 알림
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionLabel("알림")
+                    HStack(spacing: 12) {
+                        Image(systemName: "bell.badge.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.yellow)
+                            .frame(width: 34, height: 34)
+                            .background(Circle().fill(Color.yellow.opacity(0.15)))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("종료 알림")
+                                .font(.fromCSSFont(16, weight: .medium))
+                                .foregroundStyle(TimerColor.textPrimary)
+                            Text("운동·휴식이 끝날 때 소리와 배너로 알려요")
+                                .font(.system(size: 12))
+                                .foregroundStyle(TimerColor.textSecondary)
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: $settings.phaseAlarmEnabled)
+                            .labelsHidden()
+                            .tint(accent)
+                            .onChange(of: settings.phaseAlarmEnabled) { enabled in
+                                if enabled {
+                                    NotificationService.shared.requestAuthorizationIfNeeded()
+                                }
+                            }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
                     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
 

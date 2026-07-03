@@ -15,6 +15,8 @@ public struct BeepTimerWidgetAttributes: ActivityAttributes {
         public var phase: String
         /// "running" | "paused" | "done"
         public var status: String
+        /// 카운트다운용 시작시각 — timerInterval 렌더링용 (endTime이 지나면 00:00에서 멈춘다)
+        public var startTime: Date
         /// 카운트다운용 종료시각 (running일 때만 의미 있음)
         public var endTime: Date
         /// 일시정지 시 표시용 남은 초(옵션)
@@ -22,9 +24,10 @@ public struct BeepTimerWidgetAttributes: ActivityAttributes {
         public var setIndex: Int
         public var totalSets: Int
 
-        public init(phase: String, status: String, endTime: Date, remainSec: Int?, setIndex: Int, totalSets: Int) {
+        public init(phase: String, status: String, startTime: Date, endTime: Date, remainSec: Int?, setIndex: Int, totalSets: Int) {
             self.phase = phase
             self.status = status
+            self.startTime = startTime
             self.endTime = endTime
             self.remainSec = remainSec
             self.setIndex = setIndex
