@@ -34,15 +34,25 @@ private func modeAndStatus(
     return (mode, status)
 }
 
-/// 다이나믹 아일랜드/잠금화면 페이즈 색 — 앱의 링 색과 통일 (운동=시안, 휴식=앰버)
-private extension TimerPhaseMode {
-    var tint: Color { self == .time ? TimerColor.ringTime : TimerColor.ringRest }
+/// 다이나믹 아일랜드/잠금화면 페이즈 색 — 앱의 링 색과 통일.
+/// 타이머마다 지정한 색(ContentState의 hex)을 사용한다.
+struct PhaseTint {
+    let time: Color
+    let rest: Color
+
+    init(_ state: BeepTimerWidgetAttributes.ContentState) {
+        time = Color(hex: state.timeColorHex)
+        rest = Color(hex: state.restColorHex)
+    }
+
+    func color(for mode: TimerPhaseMode) -> Color { mode == .time ? time : rest }
 }
 
 struct TimerPhaseRingIcon: View {
     let mode: TimerPhaseMode      // .time / .rest
     let status: TimerPhaseStatus  // .running / .paused / .done
     let isAllDone: Bool
+    let tint: PhaseTint
     /// 남은 시간 5초 이하 — 링을 빨간색으로
     var endingSoon: Bool = false
 
@@ -62,7 +72,7 @@ struct TimerPhaseRingIcon: View {
     }
 
     private var ringColor: Color {
-        (status == .running && endingSoon) ? .red : mode.tint
+        (status == .running && endingSoon) ? .red : tint.color(for: mode)
     }
 
     // done 되자마자 mode가 변경되어버려서 다음 링 색상이 되어버립니다.
@@ -71,8 +81,8 @@ struct TimerPhaseRingIcon: View {
             return .red
         }else {
             switch mode {
-            case .time: return TimerPhaseMode.rest.tint
-            case .rest: return TimerPhaseMode.time.tint
+            case .time: return tint.color(for: .rest)
+            case .rest: return tint.color(for: .time)
             }
         }
     }
@@ -104,6 +114,7 @@ private struct MinimalIslandView: View {
     let mode: TimerPhaseMode
     let status: TimerPhaseStatus
     let endingSoon: Bool
+    let tint: PhaseTint
 
     var body: some View {
         ZStack {
@@ -120,8 +131,8 @@ private struct MinimalIslandView: View {
 
     private var ringColor: Color {
         switch status {
-        case .running: return endingSoon ? .red : mode.tint
-        case .paused:  return mode.tint
+        case .running: return endingSoon ? .red : tint.color(for: mode)
+        case .paused:  return tint.color(for: mode)
         case .done:    return .red
         }
     }
@@ -177,6 +188,7 @@ private struct CompactPhaseRing: View {
     let mode: TimerPhaseMode
     let status: TimerPhaseStatus
     let isAllDone: Bool
+    let tint: PhaseTint
 
     var body: some View {
         if status == .running, state.endTime > Date() {
@@ -191,11 +203,11 @@ private struct CompactPhaseRing: View {
                     .foregroundColor(.white)
             }
             .progressViewStyle(.circular)
-            .tint(state.endingSoon ? .red : mode.tint)
+            .tint(state.endingSoon ? .red : tint.color(for: mode))
             .frame(width: 25, height: 25)
         } else {
             TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone,
-                               endingSoon: state.endingSoon)
+                               tint: tint, endingSoon: state.endingSoon)
         }
     }
 }
@@ -275,8 +287,10 @@ private struct LockScreenLiveActivityView: View {
     var body: some View {
         let (mode, status) = modeAndStatus(from: context.state)
         let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
+        let phaseTint = PhaseTint(context.state)
+        let modeColor = phaseTint.color(for: mode)
         // 마지막 5초엔 배지/진행 바가 빨간색으로 바뀌어 눈에 띈다
-        let tint = (status == .running && context.state.endingSoon) ? Color.red : mode.tint
+        let tint = (status == .running && context.state.endingSoon) ? Color.red : modeColor
 
         VStack(spacing: 10) {
             // 상단: 페이즈 배지 · 타이틀 · 세트
@@ -306,7 +320,7 @@ private struct LockScreenLiveActivityView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 32))
-                        .foregroundStyle(isAllDone ? Color.green : mode.tint)
+                        .foregroundStyle(isAllDone ? Color.green : modeColor)
                     Text(isAllDone ? "모든 세트 완료!" : "완료")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
@@ -323,7 +337,7 @@ private struct LockScreenLiveActivityView: View {
                     Spacer(minLength: 6)
 
                     LAControls(status: status, ownerId: context.attributes.ownerId,
-                               tint: mode.tint)
+                               tint: modeColor)
                 }
             }
 
@@ -354,13 +368,14 @@ struct BeepTimerWidgetLiveActivity: Widget {
         } dynamicIsland: { context in
             let (mode, status) = modeAndStatus(from: context.state)
             let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
+            let phaseTint = PhaseTint(context.state)
 
             return DynamicIsland {
                 // 확장 - 왼쪽 (아이콘 + 세트/페이즈)
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
                         TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone,
-                                           endingSoon: context.state.endingSoon)
+                                           tint: phaseTint, endingSoon: context.state.endingSoon)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(context.state.setCountText)
@@ -390,21 +405,23 @@ struct BeepTimerWidgetLiveActivity: Widget {
 
                 // 확장 - 아래 (재생/일시정지 · 다음 · 정지 — App Intents)
                 DynamicIslandExpandedRegion(.bottom) {
-                    LAControls(status: status, ownerId: context.attributes.ownerId)
+                    LAControls(status: status, ownerId: context.attributes.ownerId,
+                               tint: phaseTint.color(for: mode))
                 }
 
             } compactLeading: {
                 // compact 왼쪽: 페이즈 색 원형 프로그레스 링 (운동=파랑, 휴식=초록)
-                CompactPhaseRing(state: context.state, mode: mode, status: status, isAllDone: isAllDone)
+                CompactPhaseRing(state: context.state, mode: mode, status: status,
+                                 isAllDone: isAllDone, tint: phaseTint)
             } compactTrailing: {
                 // compact 오른쪽: 남은 시간 (페이즈 색과 통일)
-                TimerCountdownText(state: context.state, status: status, tint: mode.tint)
+                TimerCountdownText(state: context.state, status: status, tint: phaseTint.color(for: mode))
                     .font(.system(size: 14, weight: .semibold))
                     .frame(minWidth: 44)
             } minimal: {
                 // 최소: 페이즈 색 링 + 아이콘, 마지막 5초엔 빨간 링, 종료 시 멈춤 아이콘
                 MinimalIslandView(mode: mode, status: status,
-                                  endingSoon: context.state.endingSoon)
+                                  endingSoon: context.state.endingSoon, tint: phaseTint)
             }
         }
     }

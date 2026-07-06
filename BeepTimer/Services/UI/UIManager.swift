@@ -6,6 +6,9 @@
 //
 
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 enum TimerColor {
     static let bg            = Color(hex: "#1A1E24")
@@ -13,8 +16,11 @@ enum TimerColor {
     static let textSecondary = Color.white.opacity(0.65)
 
     static let ringTrack     = Color.white.opacity(0.12)  // ← 항상 고정
-    static let ringTime      = Color(hex: "#22D3EE")      // Cyan 400
-    static let ringRest      = Color(hex: "#F59E0B")      // Amber 500
+    /// 링 색 기본값 (타이머가 색을 지정하지 않았을 때) — hex 문자열
+    static let defaultTimeHex = "#22D3EE"                  // Cyan 400
+    static let defaultRestHex = "#F59E0B"                  // Amber 500
+    static let ringTime      = Color(hex: defaultTimeHex)  // Cyan 400
+    static let ringRest      = Color(hex: defaultRestHex)  // Amber 500
 
     static let btnStartBg    = Color(hex: "#22C55E")      // Green 500
     static let btnResetBg    = Color(hex: "#F59E0B")      // Amber 500
@@ -45,6 +51,19 @@ extension Color {
             blue:  Double(b) / 255,
             opacity: Double(a) / 255
         )
+    }
+
+    /// "#RRGGBB" 문자열로 변환 (ColorPicker 결과 저장용). 알파는 무시한다.
+    func toHex() -> String {
+        #if canImport(UIKit)
+        let ui = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let clamp = { (v: CGFloat) -> Int in Int((max(0, min(1, v)) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", clamp(r), clamp(g), clamp(b))
+        #else
+        return TimerColor.defaultTimeHex
+        #endif
     }
 }
 

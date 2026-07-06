@@ -39,6 +39,10 @@ class TimerController: ObservableObject {
     @Published var restSec: TimeInterval = 15
     @Published var totalSets: Int = 3
 
+    /// 링 색상 (운동 / 휴식) — hex 문자열. 앱 원형·다이나믹 아일랜드·워치가 이 값을 공유한다.
+    @Published var timeColorHex: String = TimerColor.defaultTimeHex
+    @Published var restColorHex: String = TimerColor.defaultRestHex
+
     var isInfiniteSets: Bool { totalSets == Self.infiniteSets }
 
     /// 무한 반복이면 전체 자동(fullAuto)은 사용 불가 — 방치 시 끝없이 돌지 않도록
@@ -200,19 +204,25 @@ class TimerController: ObservableObject {
     }
     
     // 초기화 (단순 반복 모드)
-    func configure(title: String, time: Int, rest: Int, sets: Int){
+    func configure(title: String, time: Int, rest: Int, sets: Int,
+                   timeColorHex: String = TimerColor.defaultTimeHex,
+                   restColorHex: String = TimerColor.defaultRestHex){
         timerTitle = title
         timeSec = TimeInterval(time)
         restSec = TimeInterval(rest)
         totalSets = sets
         customSteps = []
         stepIndex = 0
+        self.timeColorHex = timeColorHex
+        self.restColorHex = restColorHex
         publishWidgetSnapshot()
     }
 
     // 초기화 (상세 모드) — 단계를 순서대로 진행한다. (autoMode 규칙대로 경계에서 멈춤)
     // loops = true면 마지막 단계 후 첫 단계로 돌아가 무한 반복한다 (totalSets = infiniteSets)
-    func configureCustom(title: String, steps: [CustomStep], loops: Bool = false) {
+    func configureCustom(title: String, steps: [CustomStep], loops: Bool = false,
+                         timeColorHex: String = TimerColor.defaultTimeHex,
+                         restColorHex: String = TimerColor.defaultRestHex) {
         timerTitle = title
         customSteps = steps
         stepIndex = 0
@@ -220,7 +230,21 @@ class TimerController: ObservableObject {
         timeSec = steps.first(where: { !$0.isRest })?.seconds ?? 30
         restSec = steps.first(where: { $0.isRest })?.seconds ?? 0
         totalSets = loops ? Self.infiniteSets : max(1, steps.filter { !$0.isRest }.count)
+        self.timeColorHex = timeColorHex
+        self.restColorHex = restColorHex
         publishWidgetSnapshot()
+    }
+
+    /// 색만 바꾸고 진행 중인 타이머는 건드리지 않는다 (설정 화면에서 색 변경 시).
+    /// 워치 동기화·Realm 저장은 호출부(ContentView)가 담당한다.
+    func updateColors(timeColorHex: String, restColorHex: String) {
+        guard self.timeColorHex != timeColorHex || self.restColorHex != restColorHex else { return }
+        self.timeColorHex = timeColorHex
+        self.restColorHex = restColorHex
+        // 진행 중이면 라이브 액티비티도 새 색으로 갱신
+        if #available(iOS 16.1, *), case .running(_, let end) = state {
+            Task { await updateLiveActivityRunning(end: end) }
+        }
     }
 
     /// 커스텀 모드: index 단계 기준 phase/setIndex 동기화
@@ -791,7 +815,9 @@ extension TimerController {
             setIndex: setIndex,
             totalSets: totalSets,
             // 마지막 5초: 링을 빨간색으로 (T-5초에 보내는 업데이트에서 true가 된다)
-            endingSoon: statusString == "running" && end.timeIntervalSinceNow <= 5.25
+            endingSoon: statusString == "running" && end.timeIntervalSinceNow <= 5.25,
+            timeColorHex: timeColorHex,
+            restColorHex: restColorHex
         )
     }
 

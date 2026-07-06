@@ -48,9 +48,11 @@ struct CircleTimerView: View {
             let rightEdge = g/2.0
             let allowed = leftEdge - rightEdge
 
-            // 트랙/진행 색
-            let trackColor    = (controller.phase == .time ? TimerColor.ringRest : TimerColor.ringTime).opacity(0.35)
-            let progressColor = (controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest)
+            // 트랙/진행 색 — 타이머별 지정 색을 사용
+            let timeColor = Color(hex: controller.timeColorHex)
+            let restColor = Color(hex: controller.restColorHex)
+            let trackColor    = (controller.phase == .time ? restColor : timeColor).opacity(0.35)
+            let progressColor = (controller.phase == .time ? timeColor : restColor)
             
             let ringRotation: Double = 90
 
@@ -88,7 +90,7 @@ struct CircleTimerView: View {
                     VStack {
                         Text(controller.phaseLabel)
                             .font(.system(size: side * 0.085, weight: .bold, design: .rounded))
-                            .foregroundStyle(controller.phase == .time ? TimerColor.ringTime : TimerColor.ringRest)
+                            .foregroundStyle(controller.phase == .time ? timeColor : restColor)
                             .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)

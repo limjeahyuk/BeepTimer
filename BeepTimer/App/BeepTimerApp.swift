@@ -13,7 +13,9 @@ import ActivityKit
 struct BeepTimerApp: App {
     init() {
         // v9: RCustomArea.webUrl(웹 모드 시작 URL) 추가 (additive 변경이라 마이그레이션 블록 불필요)
-        Realm.Configuration.defaultConfiguration = Realm.Configuration(schemaVersion: 9)
+        // v10: RCustomArea.sudokuState(스도쿠 진행 상태 JSON) 추가 (additive)
+        // v11: RTimerProgram.timeColorHex/restColorHex(링 색상) 추가 (additive)
+        Realm.Configuration.defaultConfiguration = Realm.Configuration(schemaVersion: 11)
 
         // 위젯 버튼(LiveActivityIntent)이 앱 프로세스에서 컨트롤러를 즉시 찾을 수 있도록
         // 앱 시작 시점에 싱글톤을 생성해 TimerWidgetActionBus에 등록한다.

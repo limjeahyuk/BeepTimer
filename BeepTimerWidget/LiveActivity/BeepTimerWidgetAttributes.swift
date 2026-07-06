@@ -25,13 +25,16 @@ public struct BeepTimerWidgetAttributes: ActivityAttributes {
         public var totalSets: Int
         /// 남은 시간 5초 이하 — 링을 빨간색으로 전환 (앱이 T-5초에 업데이트를 보내 갱신한다)
         public var endingSoon: Bool
+        /// 링 색상 (운동 / 휴식) — hex 문자열. 앱 원형 타이머와 통일.
+        public var timeColorHex: String
+        public var restColorHex: String
 
         /// "1/3" 또는 무한 반복(Int.max)이면 세트를 세지 않고 "∞"
         public var setCountText: String {
             totalSets == Int.max ? "∞" : "\(setIndex)/\(totalSets)"
         }
 
-        public init(phase: String, status: String, startTime: Date, endTime: Date, remainSec: Int?, setIndex: Int, totalSets: Int, endingSoon: Bool = false) {
+        public init(phase: String, status: String, startTime: Date, endTime: Date, remainSec: Int?, setIndex: Int, totalSets: Int, endingSoon: Bool = false, timeColorHex: String = "#22D3EE", restColorHex: String = "#F59E0B") {
             self.phase = phase
             self.status = status
             self.startTime = startTime
@@ -40,6 +43,8 @@ public struct BeepTimerWidgetAttributes: ActivityAttributes {
             self.setIndex = setIndex
             self.totalSets = totalSets
             self.endingSoon = endingSoon
+            self.timeColorHex = timeColorHex
+            self.restColorHex = restColorHex
         }
     }
 

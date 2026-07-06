@@ -11,6 +11,9 @@ struct TimerModel: Codable, Identifiable, Equatable {
     var id = UUID()
     let title: String
     var infiniteSets: Bool = false   // 세트 무한 반복
+    /// 링 색상 (운동 / 휴식) — hex 문자열. 기본값은 앱 기본 색(시안 / 앰버).
+    var timeColorHex: String = TimerColor.defaultTimeHex
+    var restColorHex: String = TimerColor.defaultRestHex
     let steps: [Step]
     
     struct Step: Codable, Equatable {

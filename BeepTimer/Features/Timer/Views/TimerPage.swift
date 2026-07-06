@@ -83,8 +83,10 @@ final class TimerControllerStore: ObservableObject {
                                            seconds: TimeInterval(max(1, $0.seconds)))
             }
             if onlyIfChanged, c.timerTitle == model.title, c.customSteps == steps,
-               c.isInfiniteSets == model.infiniteSets { return }
-            c.configureCustom(title: model.title, steps: steps, loops: model.infiniteSets)
+               c.isInfiniteSets == model.infiniteSets,
+               c.timeColorHex == model.timeColorHex, c.restColorHex == model.restColorHex { return }
+            c.configureCustom(title: model.title, steps: steps, loops: model.infiniteSets,
+                              timeColorHex: model.timeColorHex, restColorHex: model.restColorHex)
             return
         }
 
@@ -100,10 +102,12 @@ final class TimerControllerStore: ObservableObject {
 
         if onlyIfChanged,
            c.timerTitle == model.title, !c.isCustomMode,
-           Int(c.timeSec) == time, Int(c.restSec) == rest, c.totalSets == sets {
+           Int(c.timeSec) == time, Int(c.restSec) == rest, c.totalSets == sets,
+           c.timeColorHex == model.timeColorHex, c.restColorHex == model.restColorHex {
             return
         }
-        c.configure(title: model.title, time: max(1, time), rest: max(0, rest), sets: sets)
+        c.configure(title: model.title, time: max(1, time), rest: max(0, rest), sets: sets,
+                    timeColorHex: model.timeColorHex, restColorHex: model.restColorHex)
     }
 }
 
@@ -112,6 +116,7 @@ final class TimerControllerStore: ObservableObject {
 struct TimerPager: View {
     @StateObject private var store = TimerControllerStore()
     @ObservedObject private var customArea = CustomAreaState.shared
+    @ObservedObject private var settings = SettingManager.shared
     @Environment(\.scenePhase) var scenePhase
 
     @ObservedResults(RTimerProgram.self,
@@ -211,6 +216,9 @@ struct TimerPager: View {
             }
         }
         .onAppear {
+            // 워치 연결 활성화 + 현재 타이머 목록 전송
+            PhoneConnectivity.shared.activate()
+            pushToWatch()
             #if DEBUG
             // 개발용: 실행 인자로 타이머 목록을 바로 연다 (simctl launch ... -openLibrary)
             if ProcessInfo.processInfo.arguments.contains("-openLibrary") {
@@ -273,6 +281,10 @@ struct TimerPager: View {
         .onChange(of: programs.count) { _ in
             store.cleanup(existing: Set(programs.map(\._id)))
             if page >= programs.count { page = max(0, programs.count - 1) }
+            pushToWatch()
+        }
+        .onChange(of: settings.autoMode) { _ in
+            pushToWatch()
         }
         .onChange(of: scenePhase) { newValue in
             switch newValue {
@@ -333,6 +345,12 @@ struct TimerPager: View {
     private var currentController: TimerController {
         guard page >= 0, page < programs.count else { return TimerController.shared }
         return store.controller(for: programs[page])
+    }
+
+    /// 현재 타이머 목록을 워치로 전송
+    private func pushToWatch() {
+        PhoneConnectivity.shared.sync(programs: Array(programs),
+                                      autoModeRaw: settings.autoMode.rawValue)
     }
 
     private var rangIndices: Set<Int> {

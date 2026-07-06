@@ -12,6 +12,7 @@
 		0B51495A2EC56D0E00FA0595 /* BeepTimerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0B5149442EC56D0C00FA0595 /* BeepTimerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		0B5A48642E77CF3B0072BE81 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 0B5A48632E77CF3B0072BE81 /* RealmSwift */; };
 		0B5A48672E7804A10072BE81 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 0B5A48632E77CF3B0072BE81 /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A65395042FFB3AED0050227C /* BeepTimerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A65394F72FFB3AEB0050227C /* BeepTimerWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -21,6 +22,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 0B5149432EC56D0C00FA0595;
 			remoteInfo = BeepTimerWidgetExtension;
+		};
+		A65395022FFB3AED0050227C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0B90337A2E3E05DE0052F7B2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A65394F62FFB3AEB0050227C;
+			remoteInfo = "BeepTimerWatch Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -47,6 +55,17 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A65395082FFB3AED0050227C /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				A65395042FFB3AED0050227C /* BeepTimerWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +73,7 @@
 		0B5149462EC56D0C00FA0595 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		0B5149482EC56D0C00FA0595 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		0B9033822E3E05DE0052F7B2 /* BeepTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BeepTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A65394F72FFB3AEB0050227C /* BeepTimerWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BeepTimerWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -88,6 +108,14 @@
 			);
 			target = 0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */;
 		};
+		A6DE01A12FFB3AEB0050227C /* Exceptions for "BeepTimer" folder in "BeepTimerWatch Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Shared/TimerEngine.swift,
+				Shared/WatchSyncModels.swift,
+			);
+			target = A65394F62FFB3AEB0050227C /* BeepTimerWatch Watch App */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -105,8 +133,14 @@
 			exceptions = (
 				0B51496B2EC5770C00FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimer" target */,
 				0B51496D2EC5A6D500FA0595 /* Exceptions for "BeepTimer" folder in "BeepTimerWidgetExtension" target */,
+				A6DE01A12FFB3AEB0050227C /* Exceptions for "BeepTimer" folder in "BeepTimerWatch Watch App" target */,
 			);
 			path = BeepTimer;
+			sourceTree = "<group>";
+		};
+		A65394F82FFB3AEB0050227C /* BeepTimerWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "BeepTimerWatch Watch App";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -129,6 +163,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A65394F42FFB3AEB0050227C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -146,6 +187,7 @@
 			children = (
 				0B9033842E3E05DE0052F7B2 /* BeepTimer */,
 				0B51494A2EC56D0C00FA0595 /* BeepTimerWidget */,
+				A65394F82FFB3AEB0050227C /* BeepTimerWatch Watch App */,
 				0B5149452EC56D0C00FA0595 /* Frameworks */,
 				0B9033832E3E05DE0052F7B2 /* Products */,
 			);
@@ -156,6 +198,7 @@
 			children = (
 				0B9033822E3E05DE0052F7B2 /* BeepTimer.app */,
 				0B5149442EC56D0C00FA0595 /* BeepTimerWidgetExtension.appex */,
+				A65394F72FFB3AEB0050227C /* BeepTimerWatch Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -194,11 +237,13 @@
 				0B9033802E3E05DE0052F7B2 /* Resources */,
 				0B5A48682E7804A10072BE81 /* Embed Frameworks */,
 				0B51495F2EC56D0E00FA0595 /* Embed Foundation Extensions */,
+				A65395082FFB3AED0050227C /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				0B5149592EC56D0E00FA0595 /* PBXTargetDependency */,
+				A65395032FFB3AED0050227C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				0B9033842E3E05DE0052F7B2 /* BeepTimer */,
@@ -211,6 +256,28 @@
 			productReference = 0B9033822E3E05DE0052F7B2 /* BeepTimer.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A65394F62FFB3AEB0050227C /* BeepTimerWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A65395052FFB3AED0050227C /* Build configuration list for PBXNativeTarget "BeepTimerWatch Watch App" */;
+			buildPhases = (
+				A65394F32FFB3AEB0050227C /* Sources */,
+				A65394F42FFB3AEB0050227C /* Frameworks */,
+				A65394F52FFB3AEB0050227C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A65394F82FFB3AEB0050227C /* BeepTimerWatch Watch App */,
+			);
+			name = "BeepTimerWatch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "BeepTimerWatch Watch App";
+			productReference = A65394F72FFB3AEB0050227C /* BeepTimerWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -218,7 +285,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1640;
+				LastSwiftUpdateCheck = 1620;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
 					0B5149432EC56D0C00FA0595 = {
@@ -226,6 +293,9 @@
 					};
 					0B9033812E3E05DE0052F7B2 = {
 						CreatedOnToolsVersion = 16.4;
+					};
+					A65394F62FFB3AEB0050227C = {
+						CreatedOnToolsVersion = 16.2;
 					};
 				};
 			};
@@ -248,6 +318,7 @@
 			targets = (
 				0B9033812E3E05DE0052F7B2 /* BeepTimer */,
 				0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */,
+				A65394F62FFB3AEB0050227C /* BeepTimerWatch Watch App */,
 			);
 		};
 /* End PBXProject section */
@@ -261,6 +332,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		0B9033802E3E05DE0052F7B2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A65394F52FFB3AEB0050227C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -284,6 +362,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A65394F32FFB3AEB0050227C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -291,6 +376,11 @@
 			isa = PBXTargetDependency;
 			target = 0B5149432EC56D0C00FA0595 /* BeepTimerWidgetExtension */;
 			targetProxy = 0B5149582EC56D0E00FA0595 /* PBXContainerItemProxy */;
+		};
+		A65395032FFB3AED0050227C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A65394F62FFB3AEB0050227C /* BeepTimerWatch Watch App */;
+			targetProxy = A65395022FFB3AED0050227C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -536,6 +626,66 @@
 			};
 			name = Release;
 		};
+		A65395062FFB3AED0050227C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"BeepTimerWatch Watch App/Preview Content\"";
+				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = BeepTimerWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.LimJH.BeepTimer;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.LimJH.BeepTimer.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.2;
+			};
+			name = Debug;
+		};
+		A65395072FFB3AED0050227C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"BeepTimerWatch Watch App/Preview Content\"";
+				DEVELOPMENT_TEAM = 8WW9CMZ6D2;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = BeepTimerWatch;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.LimJH.BeepTimer;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.LimJH.BeepTimer.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.2;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -562,6 +712,15 @@
 			buildConfigurations = (
 				0B90338E2E3E05E00052F7B2 /* Debug */,
 				0B90338F2E3E05E00052F7B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A65395052FFB3AED0050227C /* Build configuration list for PBXNativeTarget "BeepTimerWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A65395062FFB3AED0050227C /* Debug */,
+				A65395072FFB3AED0050227C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

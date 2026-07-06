@@ -335,15 +335,19 @@ struct StepEditorSheet: View {
         controller.stop()
 
         // 컨트롤러 반영
+        // 상세 편집기는 색을 다루지 않으므로 컨트롤러의 현재 색을 그대로 유지한다
+        let timeHex = controller.timeColorHex
+        let restHex = controller.restColorHex
         if model.isCustom {
             controller.configureCustom(title: model.title, steps: model.steps.map {
                 TimerController.CustomStep(title: $0.title ?? "",
                                            isRest: $0.kind == .rest,
                                            seconds: TimeInterval(max(1, $0.seconds)))
-            }, loops: loopForever)
+            }, loops: loopForever, timeColorHex: timeHex, restColorHex: restHex)
         } else if let trs = model.asTimeRestSets() {
             controller.configure(title: model.title, time: trs.time, rest: trs.rest,
-                                 sets: loopForever ? TimerController.infiniteSets : trs.sets)
+                                 sets: loopForever ? TimerController.infiniteSets : trs.sets,
+                                 timeColorHex: timeHex, restColorHex: restHex)
             controller.saveLastUsed()
         }
 

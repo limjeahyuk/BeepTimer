@@ -302,6 +302,8 @@ struct ContentView: View {
         .simultaneousGesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
+                    // 웹 영역이 열려 있으면 웹뷰 세로 스크롤과 겹쳐 설정 시트가 잘못 열린다 → 무시
+                    if showMemoArea && areaMode == .web { return }
                     if value.translation.height < -50,
                        abs(value.translation.height) > abs(value.translation.width) {
                         showSettings = true
@@ -338,6 +340,7 @@ struct ContentView: View {
             case .drawing: memoStrokes = DrawingMemoStore.load(key: memoKey)
             case .photos:  slidePhotos = PhotoSlideStore.loadPhotos(key: memoKey)
             case .web:     break   // 웹뷰는 열릴 때 저장된 URL을 스스로 불러온다
+            case .sudoku:  break   // 스도쿠는 열릴 때 저장된 진행 상태를 스스로 불러온다
             }
         }
         // 설정에서 사진을 추가/삭제하면 슬라이드를 다시 불러온다
@@ -469,6 +472,8 @@ struct ContentView: View {
                     CustomAreaWebView(
                         initialURL: CustomAreaWebView.makeURL(from: PhotoSlideStore.loadWebUrl(key: memoKey))
                     )
+                case .sudoku:
+                    SudokuView(memoKey: memoKey)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -496,6 +501,8 @@ struct ContentView: View {
                 slidePhotos = PhotoSlideStore.loadPhotos(key: memoKey)
             case .web:
                 break   // 웹뷰는 열릴 때 저장된 URL을 스스로 불러온다
+            case .sudoku:
+                break   // 스도쿠는 열릴 때 저장된 진행 상태를 스스로 불러온다
             }
         }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
@@ -548,6 +555,8 @@ struct TimerSettingsSheet: View {
     @State private var showStepEditor = false
     @State private var bgPickerItem: PhotosPickerItem?
     @State private var webUrlText = ""   // 웹 모드 시작 URL (빈 문자열 = Google)
+    @State private var timeColor: Color = TimerColor.ringTime   // 운동 링 색
+    @State private var restColor: Color = TimerColor.ringRest   // 휴식 링 색
 
     private enum EditingField: Identifiable {
         case time, rest, sets
@@ -639,6 +648,19 @@ struct TimerSettingsSheet: View {
                                 showStepEditor = true
                             }
                         }
+                    }
+                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+
+                // 링 색상 — 원형 타이머 · 다이나믹 아일랜드 · 워치에 함께 반영
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionLabel("링 색상")
+                    VStack(spacing: 0) {
+                        colorRow(icon: "timer", iconColor: timeColor,
+                                 label: "운동 링", selection: $timeColor)
+                        rowDivider
+                        colorRow(icon: "pause.circle.fill", iconColor: restColor,
+                                 label: "휴식 링", selection: $restColor)
                     }
                     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
@@ -754,6 +776,16 @@ struct TimerSettingsSheet: View {
                                     .font(.system(size: 12))
                                     .foregroundStyle(TimerColor.textSecondary)
                             }
+                        case .sudoku:
+                            HStack(spacing: 8) {
+                                Image(systemName: "square.grid.3x3")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(TimerColor.textSecondary)
+                                Text("타이머 위에서 스도쿠를 풀 수 있어요. 난이도 선택과 새 게임은 영역 안에서 조절해요")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(TimerColor.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -811,6 +843,8 @@ struct TimerSettingsSheet: View {
             timeSec = max(1, Int(controller.timeSec))
             restSec = max(0, Int(controller.restSec))
             sets = max(1, controller.totalSets)
+            timeColor = Color(hex: controller.timeColorHex)
+            restColor = Color(hex: controller.restColorHex)
             webUrlText = PhotoSlideStore.loadWebUrl(key: memoKey)
         }
         .onChange(of: webUrlText) { url in
@@ -979,10 +1013,36 @@ struct TimerSettingsSheet: View {
             .padding(.leading, 62)
     }
 
+    /// 링 색 선택 행 — 우측 ColorPicker로 색을 고른다
+    private func colorRow(icon: String, iconColor: Color, label: String,
+                          selection: Binding<Color>) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(iconColor)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(iconColor.opacity(0.15)))
+
+            Text(label)
+                .font(.fromCSSFont(16, weight: .medium))
+                .foregroundStyle(TimerColor.textPrimary)
+
+            Spacer()
+
+            ColorPicker("", selection: selection, supportsOpacity: false)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+    }
+
     /// 컨트롤러 적용 + 활성 프로그램(Realm)에도 저장
     private func apply() {
         let trimmed = title.trimmingCharacters(in: .whitespaces)
         let finalTitle = trimmed.isEmpty ? controller.timerTitle : trimmed
+
+        // 링 색상은 진행 상태와 무관하게 항상 반영 (앱·아일랜드·워치 공통)
+        applyColorsIfNeeded()
 
         // 상세(커스텀) 모드: 단계는 상세 편집기가 관리하므로 이름만 반영
         if controller.isCustomMode {
@@ -1004,8 +1064,11 @@ struct TimerSettingsSheet: View {
         guard !unchanged else { return }
 
         // 변경 시: 완전히 멈추고 새 설정으로 초기화 (재시작은 사용자가 직접)
+        // 색은 위 applyColorsIfNeeded에서 이미 반영됐으므로 현재 값을 그대로 넘겨 유지한다
         controller.stop()
-        controller.configure(title: finalTitle, time: timeSec, rest: restSec, sets: sets)
+        controller.configure(title: finalTitle, time: timeSec, rest: restSec, sets: sets,
+                             timeColorHex: controller.timeColorHex,
+                             restColorHex: controller.restColorHex)
         controller.saveLastUsed()
 
         // 활성 타이머가 있으면 Realm에도 반영
@@ -1024,5 +1087,25 @@ struct TimerSettingsSheet: View {
                 p.steps.append(r)
             }
         }
+    }
+
+    /// 링 색이 바뀌었으면 컨트롤러(→아일랜드/워치)와 활성 프로그램(Realm)에 반영.
+    /// 진행 중인 타이머는 멈추지 않고 색만 갱신한다.
+    private func applyColorsIfNeeded() {
+        let timeHex = timeColor.toHex()
+        let restHex = restColor.toHex()
+        guard timeHex != controller.timeColorHex || restHex != controller.restColorHex else { return }
+
+        controller.updateColors(timeColorHex: timeHex, restColorHex: restHex)
+
+        guard let id = ActiveProgramStore.activeId(),
+              let realm = try? Realm(),
+              let p = realm.object(ofType: RTimerProgram.self, forPrimaryKey: id) else { return }
+        try? realm.write {
+            p.timeColorHex = timeHex
+            p.restColorHex = restHex
+        }
+        // 바뀐 색을 워치로도 즉시 반영
+        PhoneConnectivity.shared.resyncFromRealm(autoModeRaw: settings.autoMode.rawValue)
     }
 }

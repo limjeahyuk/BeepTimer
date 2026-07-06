@@ -14,6 +14,8 @@ class RTimerProgram: Object, ObjectKeyIdentifiable {
     @Persisted var createdAt: Date = Date()
     @Persisted var steps: List<RStep>
     @Persisted var infiniteSets: Bool = false   // 세트 무한 반복 (steps는 time/rest 한 쌍만 저장)
+    @Persisted var timeColorHex: String = TimerColor.defaultTimeHex   // 운동 링 색
+    @Persisted var restColorHex: String = TimerColor.defaultRestHex   // 휴식 링 색
 }
 
 class RStep: EmbeddedObject {
@@ -38,12 +40,16 @@ extension RTimerProgram {
         }
         self.steps = list
         self.infiniteSets = p.infiniteSets
+        self.timeColorHex = p.timeColorHex
+        self.restColorHex = p.restColorHex
     }
 
     func toModel() -> TimerModel {
         TimerModel(
             title: title,
             infiniteSets: infiniteSets,
+            timeColorHex: timeColorHex,
+            restColorHex: restColorHex,
             steps: steps.map {
                 TimerModel.Step(kind: .init(rawValue: $0.kindRaw) ?? .time,
                                 seconds: $0.seconds,
@@ -58,7 +64,9 @@ struct ProgramStore {
     
     static func open() throws -> ProgramStore {
         let config = Realm.Configuration(
-            schemaVersion: 9) { _, _ in
+            schemaVersion: 11) { _, _ in
+                // v11: 링 색상 필드 추가 (기본값 지정 → 별도 마이그레이션 불필요)
+                // (기본 설정과 버전을 반드시 일치시킨다 — BeepTimerApp.swift 참고)
                 logger.d("migration nothing")
             }
         return try ProgramStore(realm: Realm(configuration: config))
@@ -84,6 +92,8 @@ struct ProgramStore {
             try realm.write {
                 target.title = program.title
                 target.infiniteSets = program.infiniteSets
+                target.timeColorHex = program.timeColorHex
+                target.restColorHex = program.restColorHex
                 target.steps.removeAll()
                 program.steps.forEach { s in
                     let rs = RStep()
