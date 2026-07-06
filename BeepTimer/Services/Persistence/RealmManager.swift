@@ -58,7 +58,7 @@ struct ProgramStore {
     
     static func open() throws -> ProgramStore {
         let config = Realm.Configuration(
-            schemaVersion: 6) { _, _ in
+            schemaVersion: 9) { _, _ in
                 logger.d("migration nothing")
             }
         return try ProgramStore(realm: Realm(configuration: config))

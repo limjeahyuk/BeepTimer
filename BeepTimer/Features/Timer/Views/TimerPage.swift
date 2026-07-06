@@ -25,6 +25,9 @@ final class TimerControllerStore: ObservableObject {
         if let c = controllers[id] { return c }
 
         let c = TimerController()
+        // 알림·Live Activity 소유자 id를 프로그램 id로 고정 —
+        // 앱 프로세스가 재시작돼도 같은 id로 자기 알림/활동을 다시 찾는다
+        c.ownerId = id.stringValue
         apply(program.toModel(), to: c)
         let notify: () -> Void = { [weak self, weak c] in
             guard let self else { return }
@@ -79,8 +82,9 @@ final class TimerControllerStore: ObservableObject {
                                            isRest: $0.kind == .rest,
                                            seconds: TimeInterval(max(1, $0.seconds)))
             }
-            if onlyIfChanged, c.timerTitle == model.title, c.customSteps == steps { return }
-            c.configureCustom(title: model.title, steps: steps)
+            if onlyIfChanged, c.timerTitle == model.title, c.customSteps == steps,
+               c.isInfiniteSets == model.infiniteSets { return }
+            c.configureCustom(title: model.title, steps: steps, loops: model.infiniteSets)
             return
         }
 
@@ -121,16 +125,16 @@ struct TimerPager: View {
         ZStack {
             if programs.isEmpty {
                 // 저장된 타이머가 없으면 기본 타이머 한 페이지
+                // (페이지 전체에 탭 제스처를 걸면 iOS 26부터 내부 버튼 탭이 전부 먹힌다 —
+                //  메인 화면에는 텍스트 입력이 없으므로 키보드 내리기 탭은 걸지 않는다)
                 ContentView()
                     .environmentObject(TimerController.shared)
-                    .onTapGesture { hideKeyboard() }
             } else {
                 TabView(selection: $page) {
                     ForEach(Array(programs.enumerated()), id: \.element._id) { idx, p in
                         ContentView(programId: p._id)
                             .environmentObject(store.controller(for: p))
                             .tag(idx)
-                            .onTapGesture { hideKeyboard() }
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
@@ -233,6 +237,14 @@ struct TimerPager: View {
                     }
                 }
             }
+            // 개발용: 시작→일시정지→재개 흐름 자동 실행 (simctl launch ... -demoResumeFlow)
+            // 잠금화면 Live Activity 카운트다운 검증에 사용
+            if ProcessInfo.processInfo.arguments.contains("-demoResumeFlow") {
+                SettingManager.shared.phaseAlarmEnabled = false   // 권한 팝업 방지
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { currentController.start() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { currentController.toggle() }  // 일시정지
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) { currentController.toggle() }  // 재개(플레이)
+            }
             #endif
             if programs.isEmpty {
                 let c = TimerController.shared
@@ -312,8 +324,10 @@ struct TimerPager: View {
 
     /// 백그라운드 진입/복귀 처리 대상 컨트롤러 전부.
     /// 기본 타이머(shared)는 store에 없으므로 빠뜨리면 백그라운드 알림이 예약되지 않는다.
+    /// 모든 프로그램의 컨트롤러를 만들어 포함해야, 복귀 시 아직 방문 안 한 페이지의
+    /// 남은 알림/고아 Live Activity도 정리된다.
     private var backgroundControllers: [TimerController] {
-        store.allControllers + [TimerController.shared]
+        programs.map { store.controller(for: $0) } + [TimerController.shared]
     }
 
     private var currentController: TimerController {

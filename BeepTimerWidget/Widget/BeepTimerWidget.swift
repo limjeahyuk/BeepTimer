@@ -135,9 +135,9 @@ struct BeepTimerWidgetEntryView: View {
         .font(.caption2.weight(.semibold))
     }
 
-    // 세트 무한 반복(Int.max)은 ∞로 표시
+    // 세트 무한 반복(Int.max)은 세트를 세지 않고 ∞로만 표시
     private var setsText: String { snap.sets == Int.max ? "∞" : "\(snap.sets)" }
-    private var setText: String { "Set \(snap.setIndex)/\(setsText)" }
+    private var setText: String { snap.sets == Int.max ? "∞" : "Set \(snap.setIndex)/\(snap.sets)" }
 
     // MARK: Small
     private var smallBody: some View {

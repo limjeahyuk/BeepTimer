@@ -7,6 +7,7 @@
 
 import SwiftUI
 import RealmSwift
+import PhotosUI
 
 struct ContentView: View {
     @EnvironmentObject var controller: TimerController
@@ -18,16 +19,22 @@ struct ContentView: View {
 
     @State private var showSettings = false
 
-    // 커스텀 영역(그림 메모)
+    // 커스텀 영역(그림 메모 / 사진 슬라이드)
     @State private var showMemoArea = false
+    @State private var areaMode: CustomAreaMode = .drawing
     @State private var memoStrokes: [DrawingStroke] = []
     @State private var memoBgHex = ""   // 빈 문자열 = 투명 배경
+    @State private var memoBgPhoto: UIImage?   // 메모 사진 배경 (있으면 단색보다 우선)
     @State private var memoPenHex = DrawingPalette.colors[0]
+    @State private var slidePhotos: [PhotoSlideStore.Photo] = []
+    @State private var photoStamp = 0   // 설정에서 사진이 바뀌면 +1
 
     private var memoKey: String { programId?.stringValue ?? "default" }
 
-    /// 단색 배경 메모가 열려 타이머 원이 가려진 상태
-    private var isMemoCoveringTimer: Bool { showMemoArea && !memoBgHex.isEmpty }
+    /// 커스텀 영역이 열려 타이머 원이 가려진 상태 (그림 메모는 투명 배경일 때만 시간이 비친다)
+    private var isMemoCoveringTimer: Bool {
+        showMemoArea && (areaMode != .drawing || !memoBgHex.isEmpty || memoBgPhoto != nil)
+    }
 
     private var isIdle: Bool {
         if case .idle = controller.state { return true }
@@ -225,13 +232,16 @@ struct ContentView: View {
                                             ? "\(controller.customSteps.count)"
                                             : "\(controller.stepIndex + 1)/\(controller.customSteps.count)")
                             summaryColumn(label: "총 시간",
-                                          value: clockString(Int(controller.customSteps.reduce(0) { $0 + $1.seconds })))
+                                          value: controller.isInfiniteSets
+                                            ? "∞"
+                                            : clockString(Int(controller.customSteps.reduce(0) { $0 + $1.seconds })))
                         } else {
                             summaryColumn(label: "Timer", value: clockString(Int(controller.timeSec)))
                             summaryColumn(label: "Rest", value: clockString(Int(controller.restSec)))
+                            // 무한 반복은 세트를 세지 않고 ∞만 표시한다
                             summaryColumn(label: "Set",
                                           value: controller.isInfiniteSets
-                                            ? (isIdle ? "∞" : "\(controller.setIndex)/∞")
+                                            ? "∞"
                                             : (isIdle ? "\(controller.totalSets)" : "\(controller.setIndex)/\(controller.totalSets)"))
                         }
                     }
@@ -288,8 +298,8 @@ struct ContentView: View {
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: controller.showCompletionPopup)
-        // 아래에서 위로 스와이프 → 설정 시트
-        .gesture(
+        // 아래에서 위로 스와이프 → 설정 시트 (simultaneous라야 내부 버튼 탭을 먹지 않는다)
+        .simultaneousGesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
                     if value.translation.height < -50,
@@ -300,8 +310,12 @@ struct ContentView: View {
         )
         .sheet(isPresented: $showSettings) {
             TimerSettingsSheet(controller: controller,
+                               memoKey: memoKey,
+                               areaMode: $areaMode,
                                memoBgHex: $memoBgHex,
-                               memoPenHex: $memoPenHex)
+                               memoBgPhoto: $memoBgPhoto,
+                               memoPenHex: $memoPenHex,
+                               photoStamp: $photoStamp)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -316,8 +330,24 @@ struct ContentView: View {
         .onChange(of: memoPenHex) { hex in
             DrawingMemoStore.savePenColor(key: memoKey, colorHex: hex)
         }
+        // 설정에서 모드를 바꾸면 저장하고, 열려 있으면 해당 모드 내용을 불러온다
+        .onChange(of: areaMode) { mode in
+            PhotoSlideStore.saveMode(key: memoKey, mode: mode)
+            guard showMemoArea else { return }
+            switch mode {
+            case .drawing: memoStrokes = DrawingMemoStore.load(key: memoKey)
+            case .photos:  slidePhotos = PhotoSlideStore.loadPhotos(key: memoKey)
+            case .web:     break   // 웹뷰는 열릴 때 저장된 URL을 스스로 불러온다
+            }
+        }
+        // 설정에서 사진을 추가/삭제하면 슬라이드를 다시 불러온다
+        .onChange(of: photoStamp) { _ in
+            slidePhotos = PhotoSlideStore.loadPhotos(key: memoKey)
+        }
         .onAppear {
+            areaMode = PhotoSlideStore.loadMode(key: memoKey)
             memoBgHex = DrawingMemoStore.loadBackground(key: memoKey)
+            memoBgPhoto = DrawingMemoStore.loadBackgroundPhoto(key: memoKey)
             memoPenHex = DrawingMemoStore.loadPenColor(key: memoKey)
             #if DEBUG
             // 개발용: 샘플 그림 저장 (simctl launch ... -seedDrawing)
@@ -335,6 +365,50 @@ struct ContentView: View {
             if ProcessInfo.processInfo.arguments.contains("-seedMemoBg") {
                 DrawingMemoStore.saveBackground(key: memoKey, colorHex: "#FEF3C7")
             }
+            // 개발용: 메모 배경을 샘플 사진으로 저장 (simctl launch ... -seedMemoBgPhoto)
+            // 9:16 세로 사진 — scaledToFill 넘침이 가장 큰 최악 케이스
+            if ProcessInfo.processInfo.arguments.contains("-seedMemoBgPhoto") {
+                let size = CGSize(width: 600, height: 1067)
+                let img = UIGraphicsImageRenderer(size: size).image { ctx in
+                    UIColor(hue: 0.75, saturation: 0.5, brightness: 0.75, alpha: 1).setFill()
+                    ctx.fill(CGRect(origin: .zero, size: size))
+                    UIColor(hue: 0.12, saturation: 0.7, brightness: 0.95, alpha: 1).setFill()
+                    UIBezierPath(ovalIn: CGRect(x: 150, y: 250, width: 300, height: 300)).fill()
+                }
+                if let data = img.jpegData(compressionQuality: 0.9) {
+                    DrawingMemoStore.saveBackgroundPhoto(key: memoKey, imageData: data)
+                }
+            }
+            // 개발용: 커스텀 영역 모드 전환 (simctl launch ... -photoMode / -drawMode)
+            if ProcessInfo.processInfo.arguments.contains("-photoMode") {
+                PhotoSlideStore.saveMode(key: memoKey, mode: .photos)
+                areaMode = .photos
+            }
+            if ProcessInfo.processInfo.arguments.contains("-drawMode") {
+                PhotoSlideStore.saveMode(key: memoKey, mode: .drawing)
+                areaMode = .drawing
+            }
+            if ProcessInfo.processInfo.arguments.contains("-webMode") {
+                PhotoSlideStore.saveMode(key: memoKey, mode: .web)
+                areaMode = .web
+            }
+            // 개발용: 샘플 사진 채우기 (simctl launch ... -seedPhotos)
+            if ProcessInfo.processInfo.arguments.contains("-seedPhotos"),
+               PhotoSlideStore.loadPhotos(key: memoKey).isEmpty {
+                for (hue, label) in [(0.58, "1"), (0.33, "2"), (0.08, "3")] {
+                    let size = CGSize(width: 600, height: 800)
+                    let img = UIGraphicsImageRenderer(size: size).image { _ in
+                        UIColor(hue: hue, saturation: 0.55, brightness: 0.85, alpha: 1).setFill()
+                        UIBezierPath(rect: CGRect(origin: .zero, size: size)).fill()
+                        (label as NSString).draw(at: CGPoint(x: 260, y: 340),
+                                                 withAttributes: [.font: UIFont.boldSystemFont(ofSize: 120),
+                                                                  .foregroundColor: UIColor.white])
+                    }
+                    if let data = img.jpegData(compressionQuality: 0.9) {
+                        PhotoSlideStore.addPhoto(key: memoKey, imageData: data)
+                    }
+                }
+            }
             // 개발용: 그림 메모 영역을 바로 연다 (simctl launch ... -openMemo)
             if ProcessInfo.processInfo.arguments.contains("-openMemo"), !showMemoArea {
                 toggleMemoArea()
@@ -347,53 +421,87 @@ struct ContentView: View {
         }
     }
 
-    // MARK: - 커스텀 영역 (그림 메모)
+    // MARK: - 커스텀 영역 (그림 메모 / 사진 슬라이드)
 
-    /// 타이틀 오른쪽 커스텀 버튼 — 탭하면 타이머 위에 그림 메모 영역을 열고 닫는다
+    /// 타이틀 오른쪽 커스텀 버튼 — 탭하면 타이머 위에 커스텀 영역을 열고 닫는다
     private var customAreaButton: some View {
         Button {
             toggleMemoArea()
         } label: {
-            Image(systemName: showMemoArea ? "xmark" : "scribble.variable")
+            Image(systemName: showMemoArea ? "xmark" : areaMode.icon)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
                 .frame(width: 30, height: 30)
                 .background(
                     Circle().stroke(Color.white.opacity(showMemoArea ? 0.7 : 0.35), lineWidth: 1.5)
                 )
-                .contentShape(Circle())
+                // 시각은 30pt 원이지만 탭 영역은 44pt로 넓혀 놓친 탭을 막는다
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(showMemoArea ? "그림 메모 닫기" : "그림 메모 열기")
+        .accessibilityLabel(showMemoArea ? "\(areaMode.label) 닫기" : "\(areaMode.label) 열기")
     }
 
-    /// 타이머 사각 영역 위에 겹치는 투명 그림 메모 — 시간은 그대로 보인다
+    /// 타이머 사각 영역 위에 겹치는 커스텀 영역 — 그림 메모(투명이면 시간이 비침) 또는 사진 슬라이드
     @ViewBuilder
     private var memoOverlay: some View {
         if showMemoArea {
-            DrawingMemoCanvas(strokes: $memoStrokes, penColorHex: memoPenHex)
-                .background(memoBgHex.isEmpty ? Color.clear : Color(hex: memoBgHex))
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.35), lineWidth: 1.5)
-                )
-                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+            Group {
+                switch areaMode {
+                case .drawing:
+                    DrawingMemoCanvas(strokes: $memoStrokes, penColorHex: memoPenHex)
+                        .background {
+                            if let photo = memoBgPhoto {
+                                // scaledToFill로 넘친 부분은 clipShape가 "그림"만 잘라내고
+                                // 터치 판정은 남아 X/재생 버튼 탭을 먹는다 → 히트테스트 자체를 끈다
+                                Image(uiImage: photo)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .allowsHitTesting(false)
+                            } else if !memoBgHex.isEmpty {
+                                Color(hex: memoBgHex)
+                            }
+                        }
+                case .photos:
+                    PhotoSlideView(memoKey: memoKey, photos: slidePhotos, photoStamp: $photoStamp)
+                case .web:
+                    CustomAreaWebView(
+                        initialURL: CustomAreaWebView.makeURL(from: PhotoSlideStore.loadWebUrl(key: memoKey))
+                    )
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.white.opacity(0.35), lineWidth: 1.5)
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
         }
     }
 
     private func toggleMemoArea() {
         if showMemoArea {
-            DrawingMemoStore.save(key: memoKey, strokes: memoStrokes)
+            if areaMode == .drawing {
+                DrawingMemoStore.save(key: memoKey, strokes: memoStrokes)
+            }
         } else {
-            memoStrokes = DrawingMemoStore.load(key: memoKey)
-            memoBgHex = DrawingMemoStore.loadBackground(key: memoKey)
-            memoPenHex = DrawingMemoStore.loadPenColor(key: memoKey)
+            switch areaMode {
+            case .drawing:
+                memoStrokes = DrawingMemoStore.load(key: memoKey)
+                memoBgHex = DrawingMemoStore.loadBackground(key: memoKey)
+                memoBgPhoto = DrawingMemoStore.loadBackgroundPhoto(key: memoKey)
+                memoPenHex = DrawingMemoStore.loadPenColor(key: memoKey)
+            case .photos:
+                slidePhotos = PhotoSlideStore.loadPhotos(key: memoKey)
+            case .web:
+                break   // 웹뷰는 열릴 때 저장된 URL을 스스로 불러온다
+            }
         }
         withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
             showMemoArea.toggle()
         }
-        // 그림 그리는 동안 좌우 스와이프로 페이지가 넘어가지 않도록
+        // 열려 있는 동안엔 그림/사진 스와이프가 페이지 넘김으로 새지 않도록
         CustomAreaState.shared.isOpen = showMemoArea
     }
 
@@ -417,10 +525,18 @@ struct ContentView: View {
 
 struct TimerSettingsSheet: View {
     @ObservedObject var controller: TimerController
+    /// 커스텀 영역 저장 키 (프로그램 id, 기본 타이머는 "default")
+    var memoKey: String = "default"
+    /// 커스텀 영역 모드 (그림 메모 / 사진)
+    @Binding var areaMode: CustomAreaMode
     /// 그림 메모 배경색 (빈 문자열 = 투명)
     @Binding var memoBgHex: String
+    /// 그림 메모 사진 배경 (있으면 단색보다 우선)
+    @Binding var memoBgPhoto: UIImage?
     /// 그림 메모 펜 색
     @Binding var memoPenHex: String
+    /// 사진 추가/삭제 신호 — ContentView가 슬라이드를 다시 불러온다
+    @Binding var photoStamp: Int
     @ObservedObject private var settings = SettingManager.shared
 
     @State private var title: String = ""
@@ -430,6 +546,8 @@ struct TimerSettingsSheet: View {
 
     @State private var editingField: EditingField?
     @State private var showStepEditor = false
+    @State private var bgPickerItem: PhotosPickerItem?
+    @State private var webUrlText = ""   // 웹 모드 시작 URL (빈 문자열 = Google)
 
     private enum EditingField: Identifiable {
         case time, rest, sets
@@ -494,7 +612,10 @@ struct TimerSettingsSheet: View {
                         if controller.isCustomMode {
                             // 상세 모드: 단계 구성으로만 편집
                             settingRow(icon: "list.number", iconColor: .purple,
-                                       label: "단계 구성", value: "\(controller.customSteps.count)단계") {
+                                       label: "단계 구성",
+                                       value: controller.isInfiniteSets
+                                        ? "\(controller.customSteps.count)단계 · ∞"
+                                        : "\(controller.customSteps.count)단계") {
                                 showStepEditor = true
                             }
                         } else {
@@ -557,48 +678,91 @@ struct TimerSettingsSheet: View {
                     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
 
-                // 그림 메모 (펜 색상 / 배경 / 미리보기)
+                // 커스텀 영역 (그림 메모 / 사진 슬라이드)
                 VStack(alignment: .leading, spacing: 8) {
-                    sectionLabel("그림 메모")
+                    sectionLabel("타이머 위 영역")
                     VStack(alignment: .leading, spacing: 14) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("펜 색상")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(TimerColor.textSecondary)
-                            HStack(spacing: 10) {
-                                ForEach(DrawingPalette.colors, id: \.self) { hex in
-                                    colorSwatch(hex, selected: memoPenHex == hex) {
-                                        memoPenHex = hex
-                                    }
-                                }
-                                Spacer()
+                        Picker("모드", selection: $areaMode) {
+                            ForEach(CustomAreaMode.allCases, id: \.self) { mode in
+                                Text(mode.label).tag(mode)
                             }
                         }
+                        .pickerStyle(.segmented)
 
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("배경")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(TimerColor.textSecondary)
-                            HStack(spacing: 10) {
-                                colorSwatch("", selected: memoBgHex.isEmpty) {
-                                    memoBgHex = ""
-                                }
-                                ForEach(DrawingPalette.backgrounds, id: \.self) { hex in
-                                    colorSwatch(hex, selected: memoBgHex == hex) {
-                                        memoBgHex = hex
+                        switch areaMode {
+                        case .drawing:
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("펜 색상")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(TimerColor.textSecondary)
+                                HStack(spacing: 10) {
+                                    ForEach(DrawingPalette.colors, id: \.self) { hex in
+                                        colorSwatch(hex, selected: memoPenHex == hex) {
+                                            memoPenHex = hex
+                                        }
                                     }
+                                    Spacer()
                                 }
-                                Spacer()
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("배경")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(TimerColor.textSecondary)
+                                HStack(spacing: 10) {
+                                    colorSwatch("", selected: memoBgPhoto == nil && memoBgHex.isEmpty) {
+                                        memoBgHex = ""
+                                        clearBgPhoto()
+                                    }
+                                    ForEach(DrawingPalette.backgrounds, id: \.self) { hex in
+                                        colorSwatch(hex, selected: memoBgPhoto == nil && memoBgHex == hex) {
+                                            memoBgHex = hex
+                                            clearBgPhoto()
+                                        }
+                                    }
+                                    bgPhotoSwatch
+                                    Spacer()
+                                }
+                            }
+
+                            memoPreview
+                        case .photos:
+                            PhotoManageGrid(memoKey: memoKey, photoStamp: $photoStamp)
+                        case .web:
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("시작 페이지")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(TimerColor.textSecondary)
+                                HStack(spacing: 8) {
+                                    Image(systemName: "globe")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(TimerColor.textSecondary)
+                                    TextField("https://www.google.com", text: $webUrlText)
+                                        .textFieldStyle(.plain)
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(TimerColor.textPrimary)
+                                        .keyboardType(.URL)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .submitLabel(.done)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color.white.opacity(0.06),
+                                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                Text("비워두면 Google이 열려요")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(TimerColor.textSecondary)
                             }
                         }
-
-                        memoPreview
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-                    Text("단색 배경을 고르면 타이머가 가려지는 대신 남은 시간이 상단에 표시돼요")
+                    Text(areaMode == .drawing
+                         ? "단색이나 사진 배경을 고르면 타이머가 가려지는 대신 남은 시간이 상단에 표시돼요"
+                         : "영역이 열려 있는 동안 남은 시간이 상단에 표시돼요")
                         .font(.system(size: 12))
                         .foregroundStyle(TimerColor.textSecondary)
                         .padding(.leading, 4)
@@ -613,7 +777,7 @@ struct TimerSettingsSheet: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(TimerColor.textSecondary)
                     Spacer()
-                    Text(isInfinite && !controller.isCustomMode ? "∞" : mmss(totalSec))
+                    Text((controller.isCustomMode ? controller.isInfiniteSets : isInfinite) ? "∞" : mmss(totalSec))
                         .font(.fromCSSFont(20, weight: .bold))
                         .monospacedDigit()
                         .foregroundStyle(TimerColor.textPrimary)
@@ -647,6 +811,21 @@ struct TimerSettingsSheet: View {
             timeSec = max(1, Int(controller.timeSec))
             restSec = max(0, Int(controller.restSec))
             sets = max(1, controller.totalSets)
+            webUrlText = PhotoSlideStore.loadWebUrl(key: memoKey)
+        }
+        .onChange(of: webUrlText) { url in
+            PhotoSlideStore.saveWebUrl(key: memoKey, url: url)
+        }
+        // 배경 사진 선택 → 축소 저장 후 즉시 반영
+        .onChange(of: bgPickerItem) { item in
+            guard let item else { return }
+            bgPickerItem = nil
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let image = DrawingMemoStore.saveBackgroundPhoto(key: memoKey, imageData: data)
+                else { return }
+                await MainActor.run { memoBgPhoto = image }
+            }
         }
         // 어떤 방식으로 닫혀도(완료 버튼, 아래로 스와이프) 변경분이 있으면 저장
         .onDisappear {
@@ -681,13 +860,59 @@ struct TimerSettingsSheet: View {
         .accessibilityLabel(hex.isEmpty ? "투명" : "색상 \(hex)")
     }
 
+    /// 사진 배경 선택 원 — 선택된 사진이 있으면 썸네일로 표시
+    private var bgPhotoSwatch: some View {
+        PhotosPicker(selection: $bgPickerItem, matching: .images) {
+            ZStack {
+                if let photo = memoBgPhoto {
+                    Image(uiImage: photo)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 30, height: 30)
+                        .clipShape(Circle())
+                } else {
+                    Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5)
+                    Image(systemName: "photo")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+            }
+            .frame(width: 30, height: 30)
+            .overlay(
+                Circle()
+                    .stroke(accent, lineWidth: memoBgPhoto != nil ? 2 : 0)
+                    .frame(width: 38, height: 38)
+            )
+            .frame(width: 40, height: 40)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("사진 배경 선택")
+    }
+
+    private func clearBgPhoto() {
+        guard memoBgPhoto != nil else { return }
+        DrawingMemoStore.clearBackgroundPhoto(key: memoKey)
+        memoBgPhoto = nil
+    }
+
     /// 선택한 배경 + 펜 색 미리보기 — 투명 배경이면 뒤로 타이머가 비치는 느낌을 준다
     private var memoPreview: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(memoBgHex.isEmpty ? TimerColor.bg : Color(hex: memoBgHex))
 
-            if memoBgHex.isEmpty {
+            if let photo = memoBgPhoto {
+                GeometryReader { geo in
+                    Image(uiImage: photo)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        // 넘친 터치 판정이 주변 색상 버튼 탭을 먹지 않도록
+                        .allowsHitTesting(false)
+                }
+            } else if memoBgHex.isEmpty {
                 Text("00 : 41")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .monospacedDigit()

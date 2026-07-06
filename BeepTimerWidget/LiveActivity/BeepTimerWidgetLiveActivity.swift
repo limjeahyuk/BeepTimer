@@ -34,15 +34,17 @@ private func modeAndStatus(
     return (mode, status)
 }
 
-/// 다이나믹 아일랜드/잠금화면 페이즈 색 — 운동 중엔 파란색, 휴식 중엔 초록색
+/// 다이나믹 아일랜드/잠금화면 페이즈 색 — 앱의 링 색과 통일 (운동=시안, 휴식=앰버)
 private extension TimerPhaseMode {
-    var tint: Color { self == .time ? .blue : .green }
+    var tint: Color { self == .time ? TimerColor.ringTime : TimerColor.ringRest }
 }
 
 struct TimerPhaseRingIcon: View {
     let mode: TimerPhaseMode      // .time / .rest
     let status: TimerPhaseStatus  // .running / .paused / .done
     let isAllDone: Bool
+    /// 남은 시간 5초 이하 — 링을 빨간색으로
+    var endingSoon: Bool = false
 
 
     var body: some View {
@@ -59,7 +61,9 @@ struct TimerPhaseRingIcon: View {
         .foregroundColor(.white)
     }
 
-    private var ringColor: Color { mode.tint }
+    private var ringColor: Color {
+        (status == .running && endingSoon) ? .red : mode.tint
+    }
 
     // done 되자마자 mode가 변경되어버려서 다음 링 색상이 되어버립니다.
     private var doneColor: Color {
@@ -94,12 +98,12 @@ struct TimerPhaseRingIcon: View {
 // MARK: - minimal(작은 원) 뷰
 
 /// minimal 상태(다른 앱과 아일랜드를 나눠 쓰는 작은 원).
-/// Live Activity는 임의 시점(T-5초)에 뷰를 다시 그릴 수 없고, minimal에서는
-/// mask 기반 꼼수도 동작하지 않아 "마지막 5초 숫자 카운트다운"은 표시할 수 없다.
-/// 대신 실행 중엔 빨간 링 + 페이즈 아이콘, 종료 시 멈춤 아이콘을 보여준다.
+/// 뷰가 스스로 T-5초에 다시 그릴 수는 없지만, 앱이 T-5초에 endingSoon=true로
+/// 상태 업데이트를 보내주므로 실행 중엔 페이즈 색 → 마지막 5초에 빨간 링으로 바뀐다.
 private struct MinimalIslandView: View {
     let mode: TimerPhaseMode
     let status: TimerPhaseStatus
+    let endingSoon: Bool
 
     var body: some View {
         ZStack {
@@ -116,7 +120,7 @@ private struct MinimalIslandView: View {
 
     private var ringColor: Color {
         switch status {
-        case .running: return .red
+        case .running: return endingSoon ? .red : mode.tint
         case .paused:  return mode.tint
         case .done:    return .red
         }
@@ -187,10 +191,11 @@ private struct CompactPhaseRing: View {
                     .foregroundColor(.white)
             }
             .progressViewStyle(.circular)
-            .tint(mode.tint)
+            .tint(state.endingSoon ? .red : mode.tint)
             .frame(width: 25, height: 25)
         } else {
-            TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+            TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone,
+                               endingSoon: state.endingSoon)
         }
     }
 }
@@ -199,17 +204,22 @@ private struct CompactPhaseRing: View {
 
 private struct LAToggleButton: View {
     let status: TimerPhaseStatus
+    let ownerId: String
+    /// 재생/일시정지는 가장 중요한 버튼 — 페이즈 색으로 채워 강조
+    var tint: Color = TimerColor.ringTime
     var body: some View {
-        Button(intent: ToggleTimerIntent()) {
-            LAButtonLabel(systemName: status == .running ? "pause.fill" : "play.fill")
+        Button(intent: ToggleTimerIntent(ownerId: ownerId)) {
+            LAButtonLabel(systemName: status == .running ? "pause.fill" : "play.fill",
+                          bg: tint)
         }
         .buttonStyle(.plain)
     }
 }
 
 private struct LANextButton: View {
+    let ownerId: String
     var body: some View {
-        Button(intent: NextSetIntent()) {
+        Button(intent: NextSetIntent(ownerId: ownerId)) {
             LAButtonLabel(systemName: "forward.fill")
         }
         .buttonStyle(.plain)
@@ -217,9 +227,12 @@ private struct LANextButton: View {
 }
 
 private struct LAStopButton: View {
+    let ownerId: String
     var body: some View {
-        Button(intent: StopTimerIntent()) {
-            LAButtonLabel(systemName: "stop.fill", tint: TimerColor.btnResetBg)
+        Button(intent: StopTimerIntent(ownerId: ownerId)) {
+            LAButtonLabel(systemName: "stop.fill",
+                          iconTint: Color(hex: "#F87171"),
+                          bg: Color(hex: "#F87171").opacity(0.18))
         }
         .buttonStyle(.plain)
     }
@@ -227,65 +240,117 @@ private struct LAStopButton: View {
 
 private struct LAButtonLabel: View {
     let systemName: String
-    var tint: Color = .white
+    var iconTint: Color = .white
+    var bg: Color = Color.white.opacity(0.14)
     var body: some View {
         Image(systemName: systemName)
-            .font(.system(size: 15, weight: .bold))
-            .foregroundStyle(tint)
-            .frame(width: 38, height: 34)
-            .background(Color.white.opacity(0.14), in: Capsule())
+            .font(.system(size: 19, weight: .bold))
+            .foregroundStyle(iconTint)
+            .frame(width: 54, height: 46)
+            .background(bg, in: Capsule())
     }
 }
 
 /// running/paused일 때만 노출되는 컨트롤 묶음 (재생·정지 / 다음 / 정지)
 private struct LAControls: View {
     let status: TimerPhaseStatus
+    let ownerId: String
+    var tint: Color = TimerColor.ringTime
     var body: some View {
         if status != .done {
-            HStack(spacing: 10) {
-                LAToggleButton(status: status)
-                LANextButton()
-                LAStopButton()
+            HStack(spacing: 8) {
+                LAToggleButton(status: status, ownerId: ownerId, tint: tint)
+                LANextButton(ownerId: ownerId)
+                LAStopButton(ownerId: ownerId)
             }
         }
+    }
+}
+
+// MARK: - 잠금화면 뷰
+
+private struct LockScreenLiveActivityView: View {
+    let context: ActivityViewContext<BeepTimerWidgetAttributes>
+
+    var body: some View {
+        let (mode, status) = modeAndStatus(from: context.state)
+        let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
+        // 마지막 5초엔 배지/진행 바가 빨간색으로 바뀌어 눈에 띈다
+        let tint = (status == .running && context.state.endingSoon) ? Color.red : mode.tint
+
+        VStack(spacing: 10) {
+            // 상단: 페이즈 배지 · 타이틀 · 세트
+            HStack(spacing: 8) {
+                Text(mode == .time ? "TIME" : "REST")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(TimerColor.bg)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(tint))
+
+                Text(context.attributes.title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                Text(context.state.setCountText)
+                    .font(.system(size: 13, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+
+            // 가운데: 큰 타이머 + 큼직한 컨트롤
+            if status == .done {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(isAllDone ? Color.green : mode.tint)
+                    Text(isAllDone ? "모든 세트 완료!" : "완료")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Spacer()
+                }
+            } else {
+                HStack(alignment: .center, spacing: 10) {
+                    TimerCountdownText(state: context.state, status: status,
+                                       tint: context.state.endingSoon ? .red : .white)
+                        .font(.system(size: 46, weight: .bold, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+
+                    Spacer(minLength: 6)
+
+                    LAControls(status: status, ownerId: context.attributes.ownerId,
+                               tint: mode.tint)
+                }
+            }
+
+            // 하단: 남은 시간 진행 바 (실행 중에만)
+            if status == .running, context.state.endTime > Date() {
+                ProgressView(timerInterval: min(context.state.startTime, context.state.endTime)...context.state.endTime,
+                             countsDown: true) {
+                    EmptyView()
+                } currentValueLabel: {
+                    EmptyView()
+                }
+                .progressViewStyle(.linear)
+                .tint(tint)
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
     }
 }
 
 struct BeepTimerWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: BeepTimerWidgetAttributes.self) { context in
-            // 잠금화면(확장) 뷰
-            let (mode, status) = modeAndStatus(from: context.state)
-            let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
-
-            VStack(spacing: 12) {
-                HStack(spacing: 10) {
-                    TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(context.attributes.title)
-                            .font(.headline)
-                            .lineLimit(1)
-
-                        TimerCountdownText(state: context.state, status: status)
-                            .font(.title3)
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(context.state.setCountText)
-                            .font(.subheadline.weight(.semibold))
-                        Text(mode == .time ? "Time" : "Rest")
-                            .font(.caption2)
-                            .foregroundColor(mode.tint)
-                    }
-                }
-
-                LAControls(status: status)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            // 잠금화면(확장) 뷰 — 앱과 같은 다크 톤
+            LockScreenLiveActivityView(context: context)
+                .activityBackgroundTint(TimerColor.bg)
+                .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             let (mode, status) = modeAndStatus(from: context.state)
             let isAllDone = (status == .done) && (context.state.setIndex >= context.state.totalSets)
@@ -294,7 +359,8 @@ struct BeepTimerWidgetLiveActivity: Widget {
                 // 확장 - 왼쪽 (아이콘 + 세트/페이즈)
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
-                        TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone)
+                        TimerPhaseRingIcon(mode: mode, status: status, isAllDone: isAllDone,
+                                           endingSoon: context.state.endingSoon)
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(context.state.setCountText)
@@ -324,7 +390,7 @@ struct BeepTimerWidgetLiveActivity: Widget {
 
                 // 확장 - 아래 (재생/일시정지 · 다음 · 정지 — App Intents)
                 DynamicIslandExpandedRegion(.bottom) {
-                    LAControls(status: status)
+                    LAControls(status: status, ownerId: context.attributes.ownerId)
                 }
 
             } compactLeading: {
@@ -336,8 +402,9 @@ struct BeepTimerWidgetLiveActivity: Widget {
                     .font(.system(size: 14, weight: .semibold))
                     .frame(minWidth: 44)
             } minimal: {
-                // 최소: 실행 중엔 빨간 링 + 페이즈 아이콘, 종료 시 멈춤 아이콘
-                MinimalIslandView(mode: mode, status: status)
+                // 최소: 페이즈 색 링 + 아이콘, 마지막 5초엔 빨간 링, 종료 시 멈춤 아이콘
+                MinimalIslandView(mode: mode, status: status,
+                                  endingSoon: context.state.endingSoon)
             }
         }
     }

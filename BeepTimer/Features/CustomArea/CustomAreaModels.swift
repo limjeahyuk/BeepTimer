@@ -15,6 +15,30 @@ final class CustomAreaState: ObservableObject {
     private init() {}
 }
 
+/// 커스텀 영역에 띄울 콘텐츠 종류 — 추후 텍스트 메모, 미니 게임 등이 추가될 수 있다
+enum CustomAreaMode: String, CaseIterable {
+    case drawing    // 그림 메모
+    case photos     // 사진 슬라이드
+    case web        // 웹 페이지 (기본 Google, 설정에서 시작 URL 변경)
+
+    var label: String {
+        switch self {
+        case .drawing: return "그림 메모"
+        case .photos:  return "사진"
+        case .web:     return "웹"
+        }
+    }
+
+    /// 타이틀 오른쪽 열기 버튼 아이콘
+    var icon: String {
+        switch self {
+        case .drawing: return "scribble.variable"
+        case .photos:  return "photo.on.rectangle"
+        case .web:     return "globe"
+        }
+    }
+}
+
 /// 그림 메모의 선 하나 (색 / 굵기 / 지나간 점들)
 struct DrawingStroke: Codable, Equatable {
     var colorHex: String

@@ -23,13 +23,15 @@ public struct BeepTimerWidgetAttributes: ActivityAttributes {
         public var remainSec: Int?
         public var setIndex: Int
         public var totalSets: Int
+        /// 남은 시간 5초 이하 — 링을 빨간색으로 전환 (앱이 T-5초에 업데이트를 보내 갱신한다)
+        public var endingSoon: Bool
 
-        /// "1/3" 또는 무한 반복(Int.max)이면 "1/∞"
+        /// "1/3" 또는 무한 반복(Int.max)이면 세트를 세지 않고 "∞"
         public var setCountText: String {
-            totalSets == Int.max ? "\(setIndex)/∞" : "\(setIndex)/\(totalSets)"
+            totalSets == Int.max ? "∞" : "\(setIndex)/\(totalSets)"
         }
 
-        public init(phase: String, status: String, startTime: Date, endTime: Date, remainSec: Int?, setIndex: Int, totalSets: Int) {
+        public init(phase: String, status: String, startTime: Date, endTime: Date, remainSec: Int?, setIndex: Int, totalSets: Int, endingSoon: Bool = false) {
             self.phase = phase
             self.status = status
             self.startTime = startTime
@@ -37,9 +39,16 @@ public struct BeepTimerWidgetAttributes: ActivityAttributes {
             self.remainSec = remainSec
             self.setIndex = setIndex
             self.totalSets = totalSets
+            self.endingSoon = endingSoon
         }
     }
 
     public var title: String
-    public init(title: String) { self.title = title }
+    /// 이 활동을 소유한 타이머 식별자 (프로그램 id / "shared").
+    /// 앱 프로세스가 재시작돼도 컨트롤러가 자기 활동을 다시 찾아 갱신·종료할 수 있게 한다.
+    public var ownerId: String
+    public init(title: String, ownerId: String = "") {
+        self.title = title
+        self.ownerId = ownerId
+    }
 }
