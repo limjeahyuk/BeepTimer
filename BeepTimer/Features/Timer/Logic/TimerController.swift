@@ -213,8 +213,8 @@ class TimerController: ObservableObject {
         totalSets = sets
         customSteps = []
         stepIndex = 0
-        self.timeColorHex = timeColorHex
-        self.restColorHex = restColorHex
+        self.timeColorHex = timeColorHex.isEmpty ? TimerColor.defaultTimeHex : timeColorHex
+        self.restColorHex = restColorHex.isEmpty ? TimerColor.defaultRestHex : restColorHex
         publishWidgetSnapshot()
     }
 
@@ -230,8 +230,8 @@ class TimerController: ObservableObject {
         timeSec = steps.first(where: { !$0.isRest })?.seconds ?? 30
         restSec = steps.first(where: { $0.isRest })?.seconds ?? 0
         totalSets = loops ? Self.infiniteSets : max(1, steps.filter { !$0.isRest }.count)
-        self.timeColorHex = timeColorHex
-        self.restColorHex = restColorHex
+        self.timeColorHex = timeColorHex.isEmpty ? TimerColor.defaultTimeHex : timeColorHex
+        self.restColorHex = restColorHex.isEmpty ? TimerColor.defaultRestHex : restColorHex
         publishWidgetSnapshot()
     }
 

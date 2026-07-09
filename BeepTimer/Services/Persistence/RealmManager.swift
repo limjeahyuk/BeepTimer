@@ -45,11 +45,12 @@ extension RTimerProgram {
     }
 
     func toModel() -> TimerModel {
+        // 예전 데이터(색 필드 없이 저장돼 마이그레이션으로 빈 문자열이 된 경우)는 기본색으로 보정
         TimerModel(
             title: title,
             infiniteSets: infiniteSets,
-            timeColorHex: timeColorHex,
-            restColorHex: restColorHex,
+            timeColorHex: timeColorHex.isEmpty ? TimerColor.defaultTimeHex : timeColorHex,
+            restColorHex: restColorHex.isEmpty ? TimerColor.defaultRestHex : restColorHex,
             steps: steps.map {
                 TimerModel.Step(kind: .init(rawValue: $0.kindRaw) ?? .time,
                                 seconds: $0.seconds,

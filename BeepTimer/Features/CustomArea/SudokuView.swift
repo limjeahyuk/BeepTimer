@@ -9,20 +9,88 @@ import SwiftUI
 
 struct SudokuView: View {
     @StateObject private var game: SudokuGame
+    @State private var showSuccess = false
 
     init(memoKey: String) {
         _game = StateObject(wrappedValue: SudokuGame(memoKey: memoKey))
     }
 
     var body: some View {
-        VStack(spacing: 10) {
-            header
-            board
-            numberPad
+        ZStack {
+            VStack(spacing: 10) {
+                header
+                board
+                numberPad
+            }
+            .padding(14)
+
+            if showSuccess {
+                successPopup
+            }
         }
-        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(hex: "#161B22"))
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showSuccess)
+        .onChange(of: game.state.isSolved) { solved in
+            if solved { showSuccess = true }
+        }
+    }
+
+    // MARK: - 성공 팝업 (보드 보기 / 재시작)
+
+    private var successPopup: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+
+            VStack(spacing: 14) {
+                Text("🎉")
+                    .font(.system(size: 44))
+                Text("스도쿠 완성!")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("\(game.state.difficulty.label) 난이도를 풀었어요.")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.65))
+
+                HStack(spacing: 10) {
+                    Button {
+                        showSuccess = false
+                    } label: {
+                        Text("보드 보기")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 42)
+                            .background(Color.white.opacity(0.12),
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        showSuccess = false
+                        game.newGame(game.state.difficulty)
+                    } label: {
+                        Text("재시작")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color(hex: "#161B22"))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 42)
+                            .background(Color(hex: "#34D399"),
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, 4)
+            }
+            .padding(20)
+            .frame(maxWidth: 280)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(hex: "#232A33"))
+                    .shadow(color: .black.opacity(0.45), radius: 20, x: 0, y: 8)
+            )
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
 
     // MARK: - 상단 (제목 / 난이도 / 새 게임)

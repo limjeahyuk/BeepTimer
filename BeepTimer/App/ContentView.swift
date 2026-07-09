@@ -843,9 +843,16 @@ struct TimerSettingsSheet: View {
             timeSec = max(1, Int(controller.timeSec))
             restSec = max(0, Int(controller.restSec))
             sets = max(1, controller.totalSets)
-            timeColor = Color(hex: controller.timeColorHex)
-            restColor = Color(hex: controller.restColorHex)
+            timeColor = Color(hex: controller.timeColorHex.isEmpty ? TimerColor.defaultTimeHex : controller.timeColorHex)
+            restColor = Color(hex: controller.restColorHex.isEmpty ? TimerColor.defaultRestHex : controller.restColorHex)
             webUrlText = PhotoSlideStore.loadWebUrl(key: memoKey)
+        }
+        // 색을 고르는 즉시 링에 반영 (컨트롤러 갱신 → 원형/아일랜드/워치는 닫을 때 저장)
+        .onChange(of: timeColor) { newVal in
+            controller.updateColors(timeColorHex: newVal.toHex(), restColorHex: restColor.toHex())
+        }
+        .onChange(of: restColor) { newVal in
+            controller.updateColors(timeColorHex: timeColor.toHex(), restColorHex: newVal.toHex())
         }
         .onChange(of: webUrlText) { url in
             PhotoSlideStore.saveWebUrl(key: memoKey, url: url)
@@ -1094,13 +1101,15 @@ struct TimerSettingsSheet: View {
     private func applyColorsIfNeeded() {
         let timeHex = timeColor.toHex()
         let restHex = restColor.toHex()
-        guard timeHex != controller.timeColorHex || restHex != controller.restColorHex else { return }
 
+        // 링(컨트롤러)에는 onChange로 이미 실시간 반영됨 — 여기선 최종값 확정 + 영속화
         controller.updateColors(timeColorHex: timeHex, restColorHex: restHex)
 
         guard let id = ActiveProgramStore.activeId(),
               let realm = try? Realm(),
               let p = realm.object(ofType: RTimerProgram.self, forPrimaryKey: id) else { return }
+        // 저장된 값과 다를 때만 기록 (onChange로 컨트롤러는 이미 같을 수 있으므로 Realm 기준 비교)
+        guard p.timeColorHex != timeHex || p.restColorHex != restHex else { return }
         try? realm.write {
             p.timeColorHex = timeHex
             p.restColorHex = restHex
