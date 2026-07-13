@@ -557,9 +557,16 @@ struct TimerSettingsSheet: View {
     @State private var webUrlText = ""   // 웹 모드 시작 URL (빈 문자열 = Google)
     @State private var timeColor: Color = TimerColor.ringTime   // 운동 링 색
     @State private var restColor: Color = TimerColor.ringRest   // 휴식 링 색
+    @State private var colorTarget: ColorTarget?                // 색상 선택기를 띄운 대상
 
     private enum EditingField: Identifiable {
         case time, rest, sets
+        var id: Self { self }
+    }
+
+    /// 링 색상 행을 눌렀을 때 어떤 링의 색을 고르는지
+    private enum ColorTarget: Identifiable {
+        case time, rest
         var id: Self { self }
     }
 
@@ -657,10 +664,14 @@ struct TimerSettingsSheet: View {
                     sectionLabel("링 색상")
                     VStack(spacing: 0) {
                         colorRow(icon: "timer", iconColor: timeColor,
-                                 label: "운동 링", selection: $timeColor)
+                                 label: "운동 링", selection: $timeColor) {
+                            colorTarget = .time
+                        }
                         rowDivider
                         colorRow(icon: "pause.circle.fill", iconColor: restColor,
-                                 label: "휴식 링", selection: $restColor)
+                                 label: "휴식 링", selection: $restColor) {
+                            colorTarget = .rest
+                        }
                     }
                     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
@@ -837,6 +848,10 @@ struct TimerSettingsSheet: View {
             StepEditorSheet(controller: controller)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $colorTarget) { target in
+            NativeColorPickerSheet(color: target == .time ? $timeColor : $restColor)
+                .ignoresSafeArea()
         }
         .onAppear {
             title = controller.timerTitle
@@ -1020,27 +1035,39 @@ struct TimerSettingsSheet: View {
             .padding(.leading, 62)
     }
 
-    /// 링 색 선택 행 — 우측 ColorPicker로 색을 고른다
+    /// 링 색 선택 행 — 행 전체를 누르면 색상 선택기가 열린다
     private func colorRow(icon: String, iconColor: Color, label: String,
-                          selection: Binding<Color>) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(iconColor)
-                .frame(width: 34, height: 34)
-                .background(Circle().fill(iconColor.opacity(0.15)))
+                          selection: Binding<Color>,
+                          onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(iconColor.opacity(0.15)))
 
-            Text(label)
-                .font(.fromCSSFont(16, weight: .medium))
-                .foregroundStyle(TimerColor.textPrimary)
+                Text(label)
+                    .font(.fromCSSFont(16, weight: .medium))
+                    .foregroundStyle(TimerColor.textPrimary)
 
-            Spacer()
+                Spacer()
 
-            ColorPicker("", selection: selection, supportsOpacity: false)
-                .labelsHidden()
+                // 현재 선택된 색 미리보기
+                Circle()
+                    .fill(selection.wrappedValue)
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.25), lineWidth: 1))
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(TimerColor.textSecondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+        .buttonStyle(.plain)
     }
 
     /// 컨트롤러 적용 + 활성 프로그램(Realm)에도 저장
@@ -1116,5 +1143,38 @@ struct TimerSettingsSheet: View {
         }
         // 바뀐 색을 워치로도 즉시 반영
         PhoneConnectivity.shared.resyncFromRealm(autoModeRaw: settings.autoMode.rawValue)
+    }
+}
+
+/// 행 전체 탭으로 열 수 있는 네이티브 색상 선택기.
+/// SwiftUI의 ColorPicker는 스와치를 눌러야만 열려서, 프로그램적으로 띄우기 위해 UIKit 선택기를 감싼다.
+struct NativeColorPickerSheet: UIViewControllerRepresentable {
+    @Binding var color: Color
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIColorPickerViewController {
+        let vc = UIColorPickerViewController()
+        vc.selectedColor = UIColor(color)
+        vc.supportsAlpha = false
+        vc.delegate = context.coordinator
+        return vc
+    }
+
+    func updateUIViewController(_ uiViewController: UIColorPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIColorPickerViewControllerDelegate {
+        let parent: NativeColorPickerSheet
+        init(_ parent: NativeColorPickerSheet) { self.parent = parent }
+
+        func colorPickerViewController(_ viewController: UIColorPickerViewController,
+                                       didSelect color: UIColor, continuously: Bool) {
+            parent.color = Color(color)
+        }
+
+        func colorPickerViewControllerDidFinish(_ viewController: UIColorPickerViewController) {
+            parent.dismiss()
+        }
     }
 }

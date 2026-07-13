@@ -4,16 +4,5 @@
 <dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>com.LimJH.BeepTimer</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>beeptimer</string>
-			</array>
-		</dict>
-	</array>
 </dict>
 </plist>

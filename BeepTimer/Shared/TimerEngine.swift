@@ -102,6 +102,7 @@ public final class TimerEngine {
     public init(config: EngineConfig, autoMode: EngineAutoMode) {
         self.config = config
         self.autoMode = autoMode
+        resetPosition()
     }
 
     public var isCustomMode: Bool { config.isCustom }
@@ -125,12 +126,18 @@ public final class TimerEngine {
     }
 
     private func reset() {
-        phase = .time
-        setIndex = 1
-        stepIndex = 0
+        resetPosition()
         state = .idle
         beepedSeconds.removeAll()
         lastBeepEndTime = nil
+    }
+
+    /// 첫 단계 기준으로 phase/setIndex/stepIndex를 되돌린다.
+    /// 커스텀 모드에서 첫 단계가 휴식이면 idle에도 휴식 색·라벨이 나와야 한다.
+    private func resetPosition() {
+        setIndex = 1
+        stepIndex = 0
+        phase = (config.isCustom && config.steps.first?.isRest == true) ? .rest : .time
     }
 
     // MARK: 조회
@@ -233,7 +240,7 @@ public final class TimerEngine {
 
     public func stop() {
         state = .idle
-        phase = .time
+        resetPosition()
     }
 
     /// 다음 세트/단계로 수동 이동. 마지막이면 false.

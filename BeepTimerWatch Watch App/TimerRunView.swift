@@ -2,7 +2,7 @@
 //  TimerRunView.swift
 //  BeepTimerWatch Watch App
 //
-//  원(링) 하나로 선택한 타이머를 실행한다.
+//  선택한 타이머를 실행한다. 남은 시간을 큰 숫자로 표시한다.
 //   · 탭        = 재생 / 일시정지
 //   · 왼쪽 스와이프 = 다음 세트
 //   · 오른쪽 스와이프 = 처음으로 되돌리기
@@ -29,48 +29,34 @@ struct TimerRunView: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            let ring = max(9, side * 0.075)
-            // 링 두께의 절반이 화면 밖으로 나가 잘리지 않게 + 바깥 여백을 위해 지름을 줄인다
-            let diameter = side - ring - side * 0.12
 
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.14), lineWidth: ring)
+            VStack(spacing: side * 0.02) {
+                Text(model.phaseLabel)
+                    .font(.system(size: side * 0.13, weight: .bold))
+                    .foregroundStyle(phaseColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
 
-                Circle()
-                    .trim(from: 0, to: model.progress)
-                    .stroke(phaseColor, style: StrokeStyle(lineWidth: ring, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 0.1), value: model.progress)
+                Text(timeString(model.remaining))
+                    .font(.system(size: side * 0.42, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
 
-                VStack(spacing: side * 0.01) {
-                    Text(model.phaseLabel)
-                        .font(.system(size: side * 0.11, weight: .bold))
-                        .foregroundStyle(phaseColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-
-                    Text(timeString(model.remaining))
-                        .font(.system(size: side * 0.26, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-
+                HStack(spacing: side * 0.05) {
                     Text(setText)
-                        .font(.system(size: side * 0.085))
+                        .font(.system(size: side * 0.1))
                         .foregroundStyle(.secondary)
 
                     Image(systemName: model.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: side * 0.11, weight: .bold))
+                        .font(.system(size: side * 0.1, weight: .bold))
                         .foregroundStyle(.white.opacity(0.85))
-                        .padding(.top, side * 0.015)
                 }
-                .padding(.horizontal, ring + side * 0.04)
             }
-            .frame(width: diameter, height: diameter)
-            .position(x: geo.size.width / 2, y: geo.size.height / 2)
-            .contentShape(Circle())
+            .padding(.horizontal, side * 0.04)
+            .frame(width: geo.size.width, height: geo.size.height)
+            .contentShape(Rectangle())
             .onTapGesture { model.toggle() }
             .gesture(
                 DragGesture(minimumDistance: 24)
@@ -84,7 +70,6 @@ struct TimerRunView: View {
                     }
             )
         }
-        .ignoresSafeArea()
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear { model.teardown() }

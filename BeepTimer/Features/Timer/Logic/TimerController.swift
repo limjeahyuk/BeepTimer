@@ -213,6 +213,8 @@ class TimerController: ObservableObject {
         totalSets = sets
         customSteps = []
         stepIndex = 0
+        phase = .time
+        setIndex = 1
         self.timeColorHex = timeColorHex.isEmpty ? TimerColor.defaultTimeHex : timeColorHex
         self.restColorHex = restColorHex.isEmpty ? TimerColor.defaultRestHex : restColorHex
         publishWidgetSnapshot()
@@ -225,7 +227,8 @@ class TimerController: ObservableObject {
                          restColorHex: String = TimerColor.defaultRestHex) {
         timerTitle = title
         customSteps = steps
-        stepIndex = 0
+        // 첫 단계가 휴식이면 링·라벨도 휴식 색으로 시작해야 한다
+        syncCustomPhase(at: 0)
         // 위젯/요약 표시용 대푯값
         timeSec = steps.first(where: { !$0.isRest })?.seconds ?? 30
         restSec = steps.first(where: { $0.isRest })?.seconds ?? 0
@@ -264,7 +267,7 @@ class TimerController: ObservableObject {
         case .idle:
             snapshot = TimerWidgetSnapshot(
                 title: timerTitle, time: Int(timeSec), rest: Int(restSec), sets: totalSets,
-                isActive: false, phaseIsRest: false, setIndex: 1,
+                isActive: false, phaseIsRest: phase == .rest, setIndex: 1,
                 endTime: nil, isPaused: false, pausedRemain: nil
             )
         case .running(let start, let end):
@@ -371,7 +374,13 @@ class TimerController: ObservableObject {
     func stop() {
         showCompletionPopup = false
         state = .idle
-        phase = .time
+        // 처음 상태로 — 커스텀 모드는 첫 단계 기준 (첫 단계가 휴식이면 휴식 색 유지)
+        if isCustomMode {
+            syncCustomPhase(at: 0)
+        } else {
+            phase = .time
+            setIndex = 1
+        }
         stopTicker()
         publishWidgetSnapshot()
         // Live Activity 종료
