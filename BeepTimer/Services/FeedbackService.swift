@@ -16,14 +16,17 @@ final class FeedbackService {
 
     private var configured = false
 
-    /// 무음 스위치가 켜져 있으면 소리가 자동으로 안 들리도록(.ambient) 설정
+    /// 무음(벨소리/무음) 스위치와 상관없이, 재생 중인 음악과 섞여서 비프음이 들리도록 설정.
+    /// - .playback  : 무음 스위치가 켜져 있어도 소리가 난다 (운동/타이머 알림 용도)
+    /// - .mixWithOthers : 이어폰으로 듣던 음악을 끊지 않고 그 위로 비프음을 얹는다
     func configureIfNeeded() {
-        guard !configured else { return }
-        configured = true
-
         let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.ambient, options: [.mixWithOthers])
+            if !configured {
+                try session.setCategory(.playback, options: [.mixWithOthers])
+                configured = true
+            }
+            // 통화·다른 앱 등으로 세션이 비활성화됐을 수 있으므로 매번 활성 보장
             try session.setActive(true)
         } catch {
             // 설정 실패해도 시스템 사운드/진동은 동작함
@@ -40,6 +43,9 @@ final class FeedbackService {
 
         // 짧은 진동(징)
         AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+
+        // 워치가 연결돼 있으면 손목 햅틱도 함께
+        PhoneConnectivity.shared.sendBeep("tick")
     }
 
     /// 페이즈 끝(0초) 긴 소리 + 진동
@@ -50,6 +56,8 @@ final class FeedbackService {
             AudioServicesPlaySystemSound(1013)
         }
         AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+
+        PhoneConnectivity.shared.sendBeep("phaseEnd")
     }
 
     /// 전체 세트 완료: 3연타 긴 소리 + 진동 2번 (페이즈 종료음과 구분)
@@ -64,6 +72,8 @@ final class FeedbackService {
             AudioServicesPlaySystemSound(1013)
             AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
         }
+
+        PhoneConnectivity.shared.sendBeep("complete")
     }
 }
 

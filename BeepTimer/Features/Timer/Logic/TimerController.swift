@@ -366,6 +366,12 @@ class TimerController: ObservableObject {
     /// 현재 상태를 Live Activity에 반영한다. (이미 생성돼 있을 때만 업데이트)
     func refreshLiveActivity() {
         publishWidgetSnapshot()
+        // 워치 미러링: 실행 중이면 워치가 런타임 세션을 잡아 손목 햅틱을 계속 받는다
+        if case .running = state {
+            PhoneConnectivity.shared.sendTimerRunning(true)
+        } else {
+            PhoneConnectivity.shared.sendTimerRunning(false)
+        }
         guard #available(iOS 16.1, *) else { return }
         Task { await syncLiveActivityForCurrentState() }
     }
@@ -383,6 +389,7 @@ class TimerController: ObservableObject {
         }
         stopTicker()
         publishWidgetSnapshot()
+        PhoneConnectivity.shared.sendTimerRunning(false)
         // Live Activity 종료
         Task { await endLiveActivity(immediate: true) }
     }
@@ -412,8 +419,14 @@ class TimerController: ObservableObject {
     // 종료 체크
     func tryFireEndIfNeeded() {
         let now = Date()
-        if case .running(_, let end) = state, now >= end {
-            logger.d("tryFireEndIfNeeded running now \(now) end \(end)")
+        guard case .running(_, let end) = state, now >= end else { return }
+        logger.d("tryFireEndIfNeeded running now \(now) end \(end)")
+        // 종료시각을 한참 지나서야 발견했다면(서스펜드됐다 깨어난 직후 등) 실시간 진행이 아니다.
+        // advancePhase()는 다음 페이즈를 "지금"부터 시작하므로 이미 지나간 페이즈를 다시 돌리게 된다.
+        // 이 경우엔 흘러간 시간만큼 타임라인을 따라잡는다.
+        if now.timeIntervalSince(end) > 2 {
+            catchUpFromBackground()
+        } else {
             advancePhase()
         }
     }

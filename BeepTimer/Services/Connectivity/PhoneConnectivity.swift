@@ -22,6 +22,29 @@ final class PhoneConnectivity: NSObject, WCSessionDelegate {
         s.activate()
     }
 
+    // MARK: 실시간 미러링 — 아이폰 비프가 울릴 때 워치 햅틱도 함께
+
+    /// 아이폰에서 비프가 울리는 순간 워치로 전달해 손목 햅틱을 울린다.
+    /// 워치 앱이 켜져 있거나(포그라운드) 런타임 세션이 살아있을 때만 도달한다.
+    /// kind: "tick"(3·2·1) | "phaseEnd"(페이즈 종료) | "complete"(전체 완료)
+    func sendBeep(_ kind: String) {
+        let s = WCSession.default
+        guard WCSession.isSupported(), s.activationState == .activated, s.isReachable else { return }
+        s.sendMessage(["beep": kind], replyHandler: nil, errorHandler: nil)
+    }
+
+    private var lastMirrorRunning: Bool?
+
+    /// 아이폰 타이머 실행 여부를 워치에 알린다.
+    /// 워치는 실행 중일 때 확장 런타임 세션을 잡아 손목을 내려도 햅틱을 계속 받는다.
+    func sendTimerRunning(_ running: Bool) {
+        guard lastMirrorRunning != running else { return }
+        let s = WCSession.default
+        guard WCSession.isSupported(), s.activationState == .activated, s.isReachable else { return }
+        lastMirrorRunning = running
+        s.sendMessage(["mirrorRunning": running], replyHandler: nil, errorHandler: nil)
+    }
+
     /// 현재 타이머 목록을 워치로 보낸다. (프로그램 변경 시 호출)
     func sync(programs: [RTimerProgram], autoModeRaw: Int) {
         let timers = programs.map { Self.syncTimer(from: $0) }
@@ -79,6 +102,12 @@ final class PhoneConnectivity: NSObject, WCSessionDelegate {
     }
 
     func sessionDidBecomeInactive(_ session: WCSession) {}
+
+    /// 워치 앱이 열리거나 닫힐 때: 다음 상태 갱신에서 실행 여부를 다시 보내도록 리셋
+    /// (타이머 도중에 워치 앱을 열어도 런타임 세션을 잡을 수 있게)
+    func sessionReachabilityDidChange(_ session: WCSession) {
+        lastMirrorRunning = nil
+    }
 
     func sessionDidDeactivate(_ session: WCSession) {
         session.activate()   // 워치 전환 후 재활성화

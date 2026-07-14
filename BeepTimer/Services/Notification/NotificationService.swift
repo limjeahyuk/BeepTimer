@@ -84,8 +84,8 @@ final class NotificationService {
 
             let content = UNMutableNotificationContent()
             content.sound = .default
-            // 집중 모드/알림 요약에 묻히지 않고 즉시 소리·진동이 나도록 (entitlement 필요)
-            content.interruptionLevel = .timeSensitive
+            // interruptionLevel은 기본(.active)을 쓴다 — .timeSensitive로 올리면
+            // 집중 모드는 뚫지만 알림마다 "긴급" 라벨이 붙는다.
             switch b.next {
             case .time(let set):
                 content.title = "운동 시작 💪"

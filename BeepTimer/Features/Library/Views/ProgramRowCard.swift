@@ -587,13 +587,12 @@ struct SetsPickerSheet: View {
     let initial: Int
     let minSets: Int
     let maxSets: Int
-    var allowInfinite: Bool = false   // 맨 아래 "∞ 무한 반복" 옵션 노출
+    var allowInfinite: Bool = false   // "무한 반복" 토글 노출
     let onDone: (Int) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var value: Int = 1
-
-    private var isInfinite: Bool { value == TimerController.infiniteSets }
+    @State private var loopForever = false   // 무한 반복 토글
 
     var body: some View {
         VStack(spacing: 16) {
@@ -602,41 +601,63 @@ struct SetsPickerSheet: View {
                     .font(.title3).bold()
                 Spacer()
                 Button("완료") {
-                    onDone(value)
+                    onDone(loopForever ? TimerController.infiniteSets : value)
                     dismiss()
                 }
                 .font(.headline)
             }
 
-            Picker("Sets", selection: $value) {
-                ForEach(minSets...maxSets, id: \.self) { v in
-                    Text("\(v) 세트").tag(v)
+            // 무한 반복: 한 번의 탭으로 켜고 끈다 (휠을 99칸 굴릴 필요 없음)
+            if allowInfinite {
+                HStack(spacing: 8) {
+                    Image(systemName: "infinity")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("무한 반복")
+                        .font(.system(size: 15, weight: .medium))
+                    Spacer()
+                    Toggle("", isOn: $loopForever.animation())
+                        .labelsHidden()
                 }
-                if allowInfinite {
-                    Text("∞ 무한 반복").tag(TimerController.infiniteSets)
-                }
+                .padding(.horizontal, 4)
             }
-            .pickerStyle(.wheel)
-            .frame(height: 180)
 
-            Text(isInfinite ? "∞ Sets" : "\(value) Sets")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .padding(.top, 4)
+            // 무한 반복이면 휠 대신 ∞ 표시
+            if loopForever {
+                VStack(spacing: 8) {
+                    Text("∞ Sets")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                    Text("세트가 끝나지 않고 계속 반복해요. 전체 자동(Auto) 모드는 사용할 수 없어 세트가 끝날 때마다 멈춥니다.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+            } else {
+                Picker("Sets", selection: $value) {
+                    ForEach(minSets...maxSets, id: \.self) { v in
+                        Text("\(v) 세트").tag(v)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(height: 180)
 
-            if isInfinite {
-                Text("세트가 끝나지 않고 계속 반복해요. 전체 자동(Auto) 모드는 사용할 수 없어 세트가 끝날 때마다 멈춥니다.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                Text("\(value) Sets")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .padding(.top, 4)
             }
 
             Spacer(minLength: 8)
         }
         .padding(16)
         .onAppear {
-            value = (allowInfinite && initial == TimerController.infiniteSets)
-                ? initial
-                : clamp(initial, minSets, maxSets)
+            if allowInfinite, initial == TimerController.infiniteSets {
+                loopForever = true
+                value = clamp(3, minSets, maxSets)   // 토글을 끄면 돌아올 기본값
+            } else {
+                loopForever = false
+                value = clamp(initial, minSets, maxSets)
+            }
         }
     }
 

@@ -3,16 +3,22 @@
 //  BeepTimerWatch Watch App
 //
 //  아이폰에서 보내는 타이머 목록을 받는다. (워치는 편집하지 않고 골라서 실행만)
+//  아이폰 타이머가 울릴 때는 비프 메시지를 받아 손목 햅틱을 함께 울린다.
 //
 
 import Foundation
 import WatchConnectivity
+import WatchKit
 
 final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = WatchConnectivityManager()
 
     @Published var timers: [SyncTimer] = []
     @Published var autoMode: EngineAutoMode = .fullAuto
+
+    /// 아이폰 타이머 미러링용 런타임 세션 — 아이폰 타이머가 도는 동안 잡아둬서
+    /// 손목을 내려도(앱이 백그라운드여도) 비프 메시지를 계속 받아 햅틱을 울린다.
+    private let mirrorRuntime = WatchRuntimeSession()
 
     func activate() {
         guard WCSession.isSupported() else { return }
@@ -49,5 +55,31 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
 
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
         apply(applicationContext)
+    }
+
+    /// 아이폰 타이머 미러링 메시지 (응답 없는 단방향)
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        if let beep = message["beep"] as? String {
+            DispatchQueue.main.async { self.playMirrorHaptic(beep) }
+        }
+        if let running = message["mirrorRunning"] as? Bool {
+            DispatchQueue.main.async {
+                if running {
+                    self.mirrorRuntime.start()
+                } else {
+                    self.mirrorRuntime.stop()
+                }
+            }
+        }
+    }
+
+    /// 아이폰 비프 종류 → 손목 햅틱 (워치 자체 실행 햅틱과 동일한 매핑)
+    private func playMirrorHaptic(_ kind: String) {
+        switch kind {
+        case "tick":     WKInterfaceDevice.current().play(.click)
+        case "phaseEnd": WKInterfaceDevice.current().play(.notification)
+        case "complete": WKInterfaceDevice.current().play(.success)
+        default: break
+        }
     }
 }
