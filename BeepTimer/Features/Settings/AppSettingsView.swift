@@ -13,13 +13,6 @@ struct AppSettingsView: View {
 
     private let accent = Color(hex: "#22D3EE")
 
-    /// 워치 색상 편집 대상 (색상 선택기 시트용)
-    private enum WatchColorField: Int, Identifiable {
-        case bg, time, rest
-        var id: Int { rawValue }
-    }
-    @State private var pickerField: WatchColorField?
-
     var body: some View {
         ZStack {
             TimerColor.bg.ignoresSafeArea()
@@ -124,118 +117,11 @@ struct AppSettingsView: View {
                         .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
 
-                    // 워치 화면 색상 — 모든 타이머에 통일 적용 (배경 / 운동 / 휴식)
-                    VStack(alignment: .leading, spacing: 8) {
-                        sectionLabel("워치 화면 색상")
-
-                        watchPreview
-                            .padding(.bottom, 4)
-
-                        VStack(spacing: 0) {
-                            watchColorRow(icon: "square.fill", label: "뒷배경",
-                                          hex: settings.watchBgColorHex, field: .bg)
-                            rowDivider
-                            watchColorRow(icon: "figure.run", label: "운동(타이머)",
-                                          hex: settings.watchTimeColorHex, field: .time)
-                            rowDivider
-                            watchColorRow(icon: "pause.circle.fill", label: "휴식",
-                                          hex: settings.watchRestColorHex, field: .rest)
-                        }
-                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                        Text("애플워치의 모든 타이머에 이 세 가지 색이 통일 적용돼요")
-                            .font(.system(size: 12))
-                            .foregroundStyle(TimerColor.textSecondary)
-                            .padding(.leading, 4)
-                    }
-
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .sheet(item: $pickerField) { field in
-            NativeColorPickerSheet(color: colorBinding(for: field))
-                .ignoresSafeArea()
-        }
-    }
-
-    // MARK: - 워치 색상
-
-    /// 워치 실행 화면을 흉내 낸 미리보기 — 배경·운동·휴식 색이 실시간 반영된다
-    private var watchPreview: some View {
-        let bg = Color(hex: settings.watchBgColorHex)
-        let time = Color(hex: settings.watchTimeColorHex)
-        let rest = Color(hex: settings.watchRestColorHex)
-        return ZStack {
-            RoundedRectangle(cornerRadius: 34, style: .continuous)
-                .fill(bg)
-            VStack(spacing: 6) {
-                Text("00:30")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(time)
-                HStack(spacing: 10) {
-                    Text("30s").foregroundStyle(time)
-                    Text("1/3").foregroundStyle(.white.opacity(0.6))
-                    Text("15s").foregroundStyle(rest)
-                }
-                .font(.system(size: 15, weight: .semibold))
-                .monospacedDigit()
-            }
-            .padding(24)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 170)
-        .overlay(
-            RoundedRectangle(cornerRadius: 34, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
-        )
-    }
-
-    /// 색 한 줄 — 누르면 색상 선택기가 열린다
-    private func watchColorRow(icon: String, label: String, hex: String,
-                               field: WatchColorField) -> some View {
-        Button {
-            pickerField = field
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Color.white.opacity(0.12)))
-
-                Text(label)
-                    .font(.fromCSSFont(16, weight: .medium))
-                    .foregroundStyle(TimerColor.textPrimary)
-
-                Spacer()
-
-                Circle()
-                    .fill(Color(hex: hex))
-                    .frame(width: 26, height: 26)
-                    .overlay(Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 1))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(TimerColor.textSecondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func colorBinding(for field: WatchColorField) -> Binding<Color> {
-        let hex: Binding<String>
-        switch field {
-        case .bg:   hex = $settings.watchBgColorHex
-        case .time: hex = $settings.watchTimeColorHex
-        case .rest: hex = $settings.watchRestColorHex
-        }
-        return Binding(get: { Color(hex: hex.wrappedValue) },
-                       set: { hex.wrappedValue = $0.toHex() })
     }
 
     // MARK: - 구성 요소

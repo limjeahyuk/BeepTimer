@@ -23,55 +23,78 @@ struct TimerRunView: View {
                                                            autoMode: autoMode))
     }
 
-    // 색은 아이폰 전체 설정에서 받은 워치 공통 색상 — 모든 타이머 통일
-    private var bgColor: Color { Color(hex: sync.colors.bgHex) }
-    private var timeColor: Color { Color(hex: sync.colors.timeHex) }
-    private var restColor: Color { Color(hex: sync.colors.restHex) }
+    // 색은 고정 팔레트 — 모든 타이머 통일 (사용자 설정 없음)
+    private var bgColor: Color { WatchPalette.bg }
+    private var timeColor: Color { WatchPalette.time }
+    private var restColor: Color { WatchPalette.rest }
     private var phaseColor: Color { model.isRest ? restColor : timeColor }
 
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
+            let ringWidth = side * 0.05
+            let ringInset = side * 0.04
+            // 반원을 아래로 내려 평평한 양 끝이 숫자 아래(스탯 행 위)에 맞닿게 한다 — 숫자를 감싸는 돔 형태.
+            let ringDrop = side * 0.16
 
-            VStack(spacing: side * 0.02) {
-                // 상세(커스텀) 타이머만 단계 이름 표시 — 단순 타이머는 색으로 구분
-                if timer.isCustom {
+            ZStack {
+                bgColor
+
+                // 진행 반원 링 — 숫자를 감싸는 위쪽 반원. 남은 시간이 줄면 반원도 함께 줄어든다.
+                // Circle 경로에서 위쪽 반원 구간은 0.5(9시)~1.0(3시)이다.
+                Circle()
+                    .trim(from: 0.5, to: 1.0)
+                    .stroke(Color.white.opacity(0.12),
+                            style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                    .padding(ringInset)
+                    .offset(y: ringDrop)
+                Circle()
+                    .trim(from: 0.5, to: 0.5 + 0.5 * model.progress)
+                    .stroke(phaseColor,
+                            style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
+                    .padding(ringInset)
+                    .offset(y: ringDrop)
+                    .animation(.linear(duration: 0.1), value: model.progress)
+
+                VStack(spacing: side * 0.02) {
+                    // 단계 이름을 항상 표시 — 커스텀은 단계 제목, 단순 타이머는 Time/Rest.
+                    // 라벨 행을 두 타입 모두 유지해 아래 숫자의 위치·크기를 동일하게 맞춘다.
                     Text(model.phaseLabel)
                         .font(.system(size: side * 0.12, weight: .bold))
-                        .foregroundStyle(phaseColor)
+                        .foregroundStyle(WatchPalette.label)   // 숫자와 다른 색으로 구분
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                }
 
-                // 남은 시간 — 현재 페이즈 색으로(운동/휴식을 색으로만 구분)
-                Text(timeString(model.remaining))
-                    .font(.system(size: side * 0.42, weight: .bold, design: .rounded))
+                    // 남은 시간 — 현재 페이즈 색으로(운동/휴식을 색으로만 구분)
+                    Text(timeString(model.remaining))
+                        .font(.system(size: side * 0.4, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(phaseColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.4)
+
+                    // 타이머 시간 · 세트 수 · 휴식 시간 (시간/휴식은 색으로만 구분, 라벨 없음)
+                    HStack(spacing: side * 0.07) {
+                        if !timer.isCustom {
+                            Text(shortDuration(timer.timeSec))
+                                .foregroundStyle(timeColor)
+                        }
+                        Text(setText)
+                            .foregroundStyle(.secondary)
+                        if !timer.isCustom {
+                            // 휴식이 0이라도 항상 표시 — 시간/휴식 자리를 일관되게 유지
+                            Text(shortDuration(timer.restSec))
+                                .foregroundStyle(restColor)
+                        }
+                    }
+                    .font(.system(size: side * 0.1, weight: .semibold))
                     .monospacedDigit()
-                    .foregroundStyle(phaseColor)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.4)
-
-                // 타이머 시간 · 세트 수 · 휴식 시간 (시간/휴식은 색으로만 구분, 라벨 없음)
-                HStack(spacing: side * 0.07) {
-                    if !timer.isCustom {
-                        Text(shortDuration(timer.timeSec))
-                            .foregroundStyle(timeColor)
-                    }
-                    Text(setText)
-                        .foregroundStyle(.secondary)
-                    if !timer.isCustom, timer.restSec > 0 {
-                        Text(shortDuration(timer.restSec))
-                            .foregroundStyle(restColor)
-                    }
+                    .minimumScaleFactor(0.5)
                 }
-                .font(.system(size: side * 0.1, weight: .semibold))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
+                .padding(.horizontal, side * 0.11)
             }
-            .padding(.horizontal, side * 0.04)
             .frame(width: geo.size.width, height: geo.size.height)
-            .background(bgColor)
             .contentShape(Rectangle())
             .onTapGesture { model.toggle() }
             .gesture(

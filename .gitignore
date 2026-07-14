@@ -34,6 +34,10 @@ playground.xcworkspace
 
 .build/
 
+# Xcode build output (custom -derivedDataPath / xcodebuild build/)
+build/
+DerivedData/
+
 # CocoaPods
 #
 # We recommend against adding the Pods directory to your .gitignore. However

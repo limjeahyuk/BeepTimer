@@ -48,12 +48,8 @@ final class PhoneConnectivity: NSObject, WCSessionDelegate {
     /// 현재 타이머 목록을 워치로 보낸다. (프로그램 변경 시 호출)
     func sync(programs: [RTimerProgram], autoModeRaw: Int) {
         let timers = programs.map { Self.syncTimer(from: $0) }
-        let s = SettingManager.shared
-        let colors = WatchColors(bgHex: s.watchBgColorHex,
-                                 timeHex: s.watchTimeColorHex,
-                                 restHex: s.watchRestColorHex)
         let payload = SyncPayload(timers: timers, autoModeRaw: autoModeRaw,
-                                  updatedAt: Date(), watchColors: colors)
+                                  updatedAt: Date())
         latest = payload
         push(payload)
     }

@@ -40,10 +40,10 @@ struct TimerListView: View {
                                     .foregroundStyle(.secondary)
                             } else {
                                 Text(shortDuration(timer.timeSec))
-                                    .foregroundStyle(Color(hex: sync.colors.timeHex))
+                                    .foregroundStyle(WatchPalette.time)
                                 if timer.restSec > 0 {
                                     Text(shortDuration(timer.restSec))
-                                        .foregroundStyle(Color(hex: sync.colors.restHex))
+                                        .foregroundStyle(WatchPalette.rest)
                                 }
                             }
                             Text(timer.isInfinite ? "∞세트" : "\(timer.totalSets)세트")
@@ -58,7 +58,7 @@ struct TimerListView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color(hex: sync.colors.bgHex).ignoresSafeArea())
+        .background(WatchPalette.bg.ignoresSafeArea())
         .navigationTitle("Beep Timer")
         .onAppear { sync.requestTimers() }
     }

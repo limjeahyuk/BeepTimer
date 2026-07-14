@@ -15,8 +15,6 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
 
     @Published var timers: [SyncTimer] = []
     @Published var autoMode: EngineAutoMode = .fullAuto
-    /// 아이폰 전체 설정에서 받은 워치 공통 색상 (배경 / 운동 / 휴식)
-    @Published var colors: WatchColors = .fallback
 
     /// 아이폰 타이머 미러링용 런타임 세션 — 아이폰 타이머가 도는 동안 잡아둬서
     /// 손목을 내려도(앱이 백그라운드여도) 비프 메시지를 계속 받아 햅틱을 울린다.
@@ -44,7 +42,6 @@ final class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDeleg
         DispatchQueue.main.async {
             self.timers = payload.timers
             self.autoMode = EngineAutoMode(rawValue: payload.autoModeRaw) ?? .fullAuto
-            self.colors = payload.watchColors
         }
     }
 

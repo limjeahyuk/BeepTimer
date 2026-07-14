@@ -38,9 +38,6 @@ enum TimerSettingKey {
     static let vibration = "App_Vibration_Enabled"
     static let theme = "App_Theme"
     static let timeInput = "App_Time_Input_Style"
-    static let watchBg = "Watch_Bg_Color"
-    static let watchTime = "Watch_Time_Color"
-    static let watchRest = "Watch_Rest_Color"
 }
 
 class SettingManager: ObservableObject {
@@ -87,38 +84,6 @@ class SettingManager: ObservableObject {
         }
     }
 
-    // MARK: 워치 화면 색상 — 모든 타이머에 통일 적용 (배경 / 운동 / 휴식)
-    // 값이 바뀌면 워치로 즉시 다시 보낸다.
-
-    /// 워치 뒷배경 색 (hex)
-    @Published var watchBgColorHex: String {
-        didSet {
-            UserDefaults.standard.set(watchBgColorHex, forKey: TimerSettingKey.watchBg)
-            pushWatchColors()
-        }
-    }
-
-    /// 워치 운동(타이머) 색 (hex)
-    @Published var watchTimeColorHex: String {
-        didSet {
-            UserDefaults.standard.set(watchTimeColorHex, forKey: TimerSettingKey.watchTime)
-            pushWatchColors()
-        }
-    }
-
-    /// 워치 휴식 색 (hex)
-    @Published var watchRestColorHex: String {
-        didSet {
-            UserDefaults.standard.set(watchRestColorHex, forKey: TimerSettingKey.watchRest)
-            pushWatchColors()
-        }
-    }
-
-    /// 바뀐 워치 색을 즉시 워치로 재전송
-    private func pushWatchColors() {
-        PhoneConnectivity.shared.resyncFromRealm(autoModeRaw: autoMode.rawValue)
-    }
-
     private init() {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: TimerSettingKey.autoMode) == nil {
@@ -145,10 +110,5 @@ class SettingManager: ObservableObject {
 
         theme = AppTheme(rawValue: defaults.integer(forKey: TimerSettingKey.theme)) ?? .dark
         timeInputStyle = TimeInputStyle(rawValue: defaults.integer(forKey: TimerSettingKey.timeInput)) ?? .keypad
-
-        // 워치 색상 — 처음엔 검정 배경 + 잘 보이는 시안/앰버 (검정 위 검정 문제 방지)
-        watchBgColorHex   = defaults.string(forKey: TimerSettingKey.watchBg)   ?? WatchColors.fallback.bgHex
-        watchTimeColorHex = defaults.string(forKey: TimerSettingKey.watchTime) ?? WatchColors.fallback.timeHex
-        watchRestColorHex = defaults.string(forKey: TimerSettingKey.watchRest) ?? WatchColors.fallback.restHex
     }
 }
