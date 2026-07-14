@@ -34,15 +34,20 @@ final class FeedbackService {
         }
     }
 
+    /// 전체 설정의 소리 토글
+    private var soundOn: Bool { SettingManager.shared.soundEnabled }
+    /// 전체 설정의 진동 토글
+    private var vibrationOn: Bool { SettingManager.shared.vibrationEnabled }
+
     /// 3/2/1 짧은 '띠' + 짧은 진동(징)
     func countdownTick() {
         configureIfNeeded()
 
         // 짧은 소리(띠) — 무음이면 자동으로 안 들림
-        AudioServicesPlaySystemSound(1104)
+        if soundOn { AudioServicesPlaySystemSound(1104) }
 
         // 짧은 진동(징)
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        if vibrationOn { AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) }
 
         // 워치가 연결돼 있으면 손목 햅틱도 함께
         PhoneConnectivity.shared.sendBeep("tick")
@@ -51,11 +56,13 @@ final class FeedbackService {
     /// 페이즈 끝(0초) 긴 소리 + 진동
     func phaseEndDouble() {
         configureIfNeeded()
-        AudioServicesPlaySystemSound(1013)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+        if soundOn {
             AudioServicesPlaySystemSound(1013)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                AudioServicesPlaySystemSound(1013)
+            }
         }
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        if vibrationOn { AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) }
 
         PhoneConnectivity.shared.sendBeep("phaseEnd")
     }
@@ -63,14 +70,16 @@ final class FeedbackService {
     /// 전체 세트 완료: 3연타 긴 소리 + 진동 2번 (페이즈 종료음과 구분)
     func workoutComplete() {
         configureIfNeeded()
-        AudioServicesPlaySystemSound(1013)
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            AudioServicesPlaySystemSound(1013)
+        if soundOn { AudioServicesPlaySystemSound(1013) }
+        if vibrationOn { AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) }
+        if soundOn {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                AudioServicesPlaySystemSound(1013)
+            }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            AudioServicesPlaySystemSound(1013)
-            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
+            if soundOn { AudioServicesPlaySystemSound(1013) }
+            if vibrationOn { AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) }
         }
 
         PhoneConnectivity.shared.sendBeep("complete")

@@ -15,9 +15,32 @@ enum AutoPlayMode: Int, CaseIterable, Identifiable {
     var id: Int { rawValue }
 }
 
+// AppTheme은 위젯 타겟과 공유하는 UIManager.swift에 정의되어 있다
+
+/// 운동/휴식 시간을 설정할 때 띄우는 입력기 종류
+enum TimeInputStyle: Int, CaseIterable, Identifiable {
+    case keypad = 0   // 숫자패드
+    case wheel = 1    // 스크롤 휠
+    var id: Int { rawValue }
+
+    var label: String {
+        switch self {
+        case .keypad: return "숫자패드"
+        case .wheel:  return "숫자 스크롤"
+        }
+    }
+}
+
 enum TimerSettingKey {
     static let autoMode = "Timer_Auto_Mode"
     static let phaseAlarm = "Timer_Phase_Alarm"
+    static let sound = "App_Sound_Enabled"
+    static let vibration = "App_Vibration_Enabled"
+    static let theme = "App_Theme"
+    static let timeInput = "App_Time_Input_Style"
+    static let watchBg = "Watch_Bg_Color"
+    static let watchTime = "Watch_Time_Color"
+    static let watchRest = "Watch_Rest_Color"
 }
 
 class SettingManager: ObservableObject {
@@ -36,6 +59,66 @@ class SettingManager: ObservableObject {
         }
     }
 
+    /// 카운트다운·종료 비프음 재생 여부
+    @Published var soundEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(soundEnabled, forKey: TimerSettingKey.sound)
+        }
+    }
+
+    /// 카운트다운·종료 진동 여부
+    @Published var vibrationEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(vibrationEnabled, forKey: TimerSettingKey.vibration)
+        }
+    }
+
+    /// 앱 배경 테마
+    @Published var theme: AppTheme {
+        didSet {
+            UserDefaults.standard.set(theme.rawValue, forKey: TimerSettingKey.theme)
+        }
+    }
+
+    /// 시간 설정 입력기 (숫자패드 / 스크롤)
+    @Published var timeInputStyle: TimeInputStyle {
+        didSet {
+            UserDefaults.standard.set(timeInputStyle.rawValue, forKey: TimerSettingKey.timeInput)
+        }
+    }
+
+    // MARK: 워치 화면 색상 — 모든 타이머에 통일 적용 (배경 / 운동 / 휴식)
+    // 값이 바뀌면 워치로 즉시 다시 보낸다.
+
+    /// 워치 뒷배경 색 (hex)
+    @Published var watchBgColorHex: String {
+        didSet {
+            UserDefaults.standard.set(watchBgColorHex, forKey: TimerSettingKey.watchBg)
+            pushWatchColors()
+        }
+    }
+
+    /// 워치 운동(타이머) 색 (hex)
+    @Published var watchTimeColorHex: String {
+        didSet {
+            UserDefaults.standard.set(watchTimeColorHex, forKey: TimerSettingKey.watchTime)
+            pushWatchColors()
+        }
+    }
+
+    /// 워치 휴식 색 (hex)
+    @Published var watchRestColorHex: String {
+        didSet {
+            UserDefaults.standard.set(watchRestColorHex, forKey: TimerSettingKey.watchRest)
+            pushWatchColors()
+        }
+    }
+
+    /// 바뀐 워치 색을 즉시 워치로 재전송
+    private func pushWatchColors() {
+        PhoneConnectivity.shared.resyncFromRealm(autoModeRaw: autoMode.rawValue)
+    }
+
     private init() {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: TimerSettingKey.autoMode) == nil {
@@ -48,5 +131,24 @@ class SettingManager: ObservableObject {
             defaults.set(true, forKey: TimerSettingKey.phaseAlarm)
         }
         phaseAlarmEnabled = defaults.bool(forKey: TimerSettingKey.phaseAlarm)
+
+        // 소리·진동은 기본 켬
+        if defaults.object(forKey: TimerSettingKey.sound) == nil {
+            defaults.set(true, forKey: TimerSettingKey.sound)
+        }
+        soundEnabled = defaults.bool(forKey: TimerSettingKey.sound)
+
+        if defaults.object(forKey: TimerSettingKey.vibration) == nil {
+            defaults.set(true, forKey: TimerSettingKey.vibration)
+        }
+        vibrationEnabled = defaults.bool(forKey: TimerSettingKey.vibration)
+
+        theme = AppTheme(rawValue: defaults.integer(forKey: TimerSettingKey.theme)) ?? .dark
+        timeInputStyle = TimeInputStyle(rawValue: defaults.integer(forKey: TimerSettingKey.timeInput)) ?? .keypad
+
+        // 워치 색상 — 처음엔 검정 배경 + 잘 보이는 시안/앰버 (검정 위 검정 문제 방지)
+        watchBgColorHex   = defaults.string(forKey: TimerSettingKey.watchBg)   ?? WatchColors.fallback.bgHex
+        watchTimeColorHex = defaults.string(forKey: TimerSettingKey.watchTime) ?? WatchColors.fallback.timeHex
+        watchRestColorHex = defaults.string(forKey: TimerSettingKey.watchRest) ?? WatchColors.fallback.restHex
     }
 }

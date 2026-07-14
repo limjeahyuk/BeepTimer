@@ -10,8 +10,40 @@ import SwiftUI
 import UIKit
 #endif
 
+/// 앱 배경 테마 — 흰색 오버레이(카드/구분선)가 살아있도록 다크 톤만 제공한다.
+/// (이 파일은 위젯 타겟에도 포함되므로 SettingManager에 의존하지 않는다)
+enum AppTheme: Int, CaseIterable, Identifiable {
+    case dark = 0      // 기본
+    case black = 1
+    case navy = 2
+    case forest = 3
+    var id: Int { rawValue }
+
+    var label: String {
+        switch self {
+        case .dark:   return "다크"
+        case .black:  return "블랙"
+        case .navy:   return "네이비"
+        case .forest: return "포레스트"
+        }
+    }
+
+    var bgHex: String {
+        switch self {
+        case .dark:   return "#1A1E24"
+        case .black:  return "#000000"
+        case .navy:   return "#141B2E"
+        case .forest: return "#14211C"
+        }
+    }
+}
+
 enum TimerColor {
-    static let bg            = Color(hex: "#1A1E24")
+    /// 전체 설정의 테마를 따라간다 (키: TimerSettingKey.theme — 위젯 타겟엔 SettingManager가 없어 문자열 직접 사용)
+    static var bg: Color {
+        let raw = UserDefaults.standard.integer(forKey: "App_Theme")
+        return Color(hex: (AppTheme(rawValue: raw) ?? .dark).bgHex)
+    }
     static let textPrimary   = Color(hex: "#F3F4F6")
     static let textSecondary = Color.white.opacity(0.65)
 

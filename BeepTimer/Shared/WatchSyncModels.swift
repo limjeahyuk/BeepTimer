@@ -42,11 +42,23 @@ struct SyncTimer: Codable, Equatable, Identifiable {
                                     timeSec: 30, restSec: 15, totalSets: 3, steps: [])
 }
 
+/// 워치 화면 색상 (모든 타이머 공통) — 전체 설정에서 정하며 워치의 모든 타이머에 통일 적용된다.
+/// 기본값 없이 디코딩(구버전 페이로드) 대비 default 지정.
+struct WatchColors: Codable, Equatable {
+    var bgHex: String = "#000000"     // 뒷배경
+    var timeHex: String = "#22D3EE"   // 운동(타이머) 색
+    var restHex: String = "#F59E0B"   // 휴식 색
+
+    static let fallback = WatchColors()
+}
+
 /// 아이폰이 App Context로 보내는 전체 페이로드
 struct SyncPayload: Codable, Equatable {
     var timers: [SyncTimer]
     var autoModeRaw: Int      // AutoPlayMode / EngineAutoMode 공통 raw 값
     var updatedAt: Date
+    /// 워치 화면 색상 (배경·운동·휴식) — 구버전 페이로드 디코딩 대비 기본값 지정
+    var watchColors: WatchColors = .fallback
 }
 
 extension SyncTimer {

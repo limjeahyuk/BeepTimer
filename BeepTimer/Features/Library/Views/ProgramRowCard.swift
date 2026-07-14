@@ -262,14 +262,14 @@ struct ProgramRowCard: View {
         .sheet(item: $editingField) { field in
             switch field {
             case .time:
-                TimePickerSheet(initialSeconds: representativeSeconds(kind: "time"),
-                                minSeconds: 1, maxSeconds: 59*60+59) { newValue in
+                TimeInputSheet(initialSeconds: representativeSeconds(kind: "time"),
+                               minSeconds: 1, maxSeconds: 59*60+59) { newValue in
                     bindingForKind("time").wrappedValue = newValue
                 }
                 .presentationDetents([.medium])
             case .rest:
-                TimePickerSheet(initialSeconds: representativeSeconds(kind: "rest"),
-                                minSeconds: 0, maxSeconds: 59*60+59) { newValue in
+                TimeInputSheet(initialSeconds: representativeSeconds(kind: "rest"),
+                               minSeconds: 0, maxSeconds: 59*60+59) { newValue in
                     bindingForKind("rest").wrappedValue = newValue
                 }
                 .presentationDetents([.medium])
@@ -458,7 +458,10 @@ struct TimeKeypadSheet: View {
         }
         .padding(16)
         .onAppear {
-            digits.removeAll()
+            // 현재 값을 미리 채워 두어 무엇이 설정돼 있는지 보이게 한다 (0이면 빈 상태)
+            let clamped = clamp(initialSeconds, 0, 59 * 60 + 59)
+            let padded = String(format: "%02d%02d", clamped / 60, clamped % 60)
+            digits = (Int(padded) ?? 0) == 0 ? "" : String(Int(padded)!)
         }
     }
 

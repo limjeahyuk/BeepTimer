@@ -11,19 +11,22 @@
 import SwiftUI
 
 struct TimerRunView: View {
+    @ObservedObject private var sync = WatchConnectivityManager.shared
     @StateObject private var model: WatchTimerModel
+    private let timer: SyncTimer
     private let title: String
-    private let timeColor: Color
-    private let restColor: Color
 
     init(timer: SyncTimer, autoMode: EngineAutoMode) {
+        self.timer = timer
         title = timer.title
-        timeColor = Color(hex: timer.timeColorHex)
-        restColor = Color(hex: timer.restColorHex)
         _model = StateObject(wrappedValue: WatchTimerModel(config: timer.toEngineConfig(),
                                                            autoMode: autoMode))
     }
 
+    // 색은 아이폰 전체 설정에서 받은 워치 공통 색상 — 모든 타이머 통일
+    private var bgColor: Color { Color(hex: sync.colors.bgHex) }
+    private var timeColor: Color { Color(hex: sync.colors.timeHex) }
+    private var restColor: Color { Color(hex: sync.colors.restHex) }
     private var phaseColor: Color { model.isRest ? restColor : timeColor }
 
     var body: some View {
@@ -31,31 +34,44 @@ struct TimerRunView: View {
             let side = min(geo.size.width, geo.size.height)
 
             VStack(spacing: side * 0.02) {
-                Text(model.phaseLabel)
-                    .font(.system(size: side * 0.13, weight: .bold))
-                    .foregroundStyle(phaseColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                // 상세(커스텀) 타이머만 단계 이름 표시 — 단순 타이머는 색으로 구분
+                if timer.isCustom {
+                    Text(model.phaseLabel)
+                        .font(.system(size: side * 0.12, weight: .bold))
+                        .foregroundStyle(phaseColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
 
+                // 남은 시간 — 현재 페이즈 색으로(운동/휴식을 색으로만 구분)
                 Text(timeString(model.remaining))
                     .font(.system(size: side * 0.42, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(phaseColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.4)
 
-                HStack(spacing: side * 0.05) {
+                // 타이머 시간 · 세트 수 · 휴식 시간 (시간/휴식은 색으로만 구분, 라벨 없음)
+                HStack(spacing: side * 0.07) {
+                    if !timer.isCustom {
+                        Text(shortDuration(timer.timeSec))
+                            .foregroundStyle(timeColor)
+                    }
                     Text(setText)
-                        .font(.system(size: side * 0.1))
                         .foregroundStyle(.secondary)
-
-                    Image(systemName: model.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: side * 0.1, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.85))
+                    if !timer.isCustom, timer.restSec > 0 {
+                        Text(shortDuration(timer.restSec))
+                            .foregroundStyle(restColor)
+                    }
                 }
+                .font(.system(size: side * 0.1, weight: .semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
             }
             .padding(.horizontal, side * 0.04)
             .frame(width: geo.size.width, height: geo.size.height)
+            .background(bgColor)
             .contentShape(Rectangle())
             .onTapGesture { model.toggle() }
             .gesture(
@@ -70,6 +86,7 @@ struct TimerRunView: View {
                     }
             )
         }
+        .ignoresSafeArea(edges: .bottom)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear { model.teardown() }
@@ -79,6 +96,13 @@ struct TimerRunView: View {
         if model.isInfinite { return "\(model.setIndex)/∞" }
         return "\(model.setIndex)/\(model.totalSets)"
     }
+}
+
+/// 짧은 길이 표기 — 60초 미만은 "30s", 이상은 "m:ss" (작은 화면용)
+func shortDuration(_ seconds: Int) -> String {
+    let v = max(0, seconds)
+    if v >= 60 { return String(format: "%d:%02d", v / 60, v % 60) }
+    return "\(v)s"
 }
 
 /// mm:ss (1시간 이상이면 h:mm:ss)

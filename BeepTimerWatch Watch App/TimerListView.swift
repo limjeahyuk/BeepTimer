@@ -29,24 +29,36 @@ struct TimerListView: View {
                 NavigationLink {
                     TimerRunView(timer: timer, autoMode: sync.autoMode)
                 } label: {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(Color(hex: timer.timeColorHex))
-                            .frame(width: 10, height: 10)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(timer.title)
-                                .font(.headline)
-                                .lineLimit(1)
-                            Text(timer.summary)
-                                .font(.caption2)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(timer.title)
+                            .font(.headline)
+                            .lineLimit(1)
+                        // 타이머 시간 · 휴식 시간(색으로 구분) · 세트 수
+                        HStack(spacing: 6) {
+                            if timer.isCustom {
+                                Text("\(timer.steps.count)단계")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text(shortDuration(timer.timeSec))
+                                    .foregroundStyle(Color(hex: sync.colors.timeHex))
+                                if timer.restSec > 0 {
+                                    Text(shortDuration(timer.restSec))
+                                        .foregroundStyle(Color(hex: sync.colors.restHex))
+                                }
+                            }
+                            Text(timer.isInfinite ? "∞세트" : "\(timer.totalSets)세트")
                                 .foregroundStyle(.secondary)
-                                .lineLimit(1)
                         }
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .lineLimit(1)
                     }
                     .padding(.vertical, 2)
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Color(hex: sync.colors.bgHex).ignoresSafeArea())
         .navigationTitle("Beep Timer")
         .onAppear { sync.requestTimers() }
     }

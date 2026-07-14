@@ -175,7 +175,7 @@ struct StepEditorSheet: View {
             }
         }
         .sheet(item: $editingDuration) { editing in
-            TimePickerSheet(initialSeconds: editing.seconds, minSeconds: 1, maxSeconds: 59*60+59) { newValue in
+            TimeInputSheet(initialSeconds: editing.seconds, minSeconds: 1, maxSeconds: 59*60+59) { newValue in
                 switch editing {
                 case .step(let id, _):
                     if let idx = steps.firstIndex(where: { $0.id == id }) {

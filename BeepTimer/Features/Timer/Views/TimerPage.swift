@@ -125,6 +125,7 @@ struct TimerPager: View {
 
     @State private var page = 0
     @State private var showLibrary = false
+    @State private var showAppSettings = false
 
     var body: some View {
         ZStack {
@@ -161,6 +162,18 @@ struct TimerPager: View {
                             .contentShape(Rectangle())
                     }
                     .accessibilityLabel("타이머 관리")
+
+                    Button {
+                        hideKeyboard()
+                        showAppSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .frame(width: 40, height: 40)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("전체 설정")
 
                     Spacer()
 
@@ -199,8 +212,15 @@ struct TimerPager: View {
             }
             .animation(.easeInOut(duration: 0.2), value: store.lastRangTitle)
         }
-        .background(Color(hex: "#1A1E24").ignoresSafeArea())
+        // 배경은 테마를 따른다 — TimerColor.bg를 쓰는 뷰들은 SettingManager를 관찰하거나
+        // 시트로 새로 열리므로 테마 변경이 즉시 반영된다
+        .background(TimerColor.bg.ignoresSafeArea())
         .ignoresSafeArea(.keyboard)
+        .sheet(isPresented: $showAppSettings) {
+            AppSettingsView()
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showLibrary) {
             NavigationStack {
                 TimerLibraryView(
@@ -223,6 +243,10 @@ struct TimerPager: View {
             // 개발용: 실행 인자로 타이머 목록을 바로 연다 (simctl launch ... -openLibrary)
             if ProcessInfo.processInfo.arguments.contains("-openLibrary") {
                 showLibrary = true
+            }
+            // 개발용: 전체 설정을 바로 연다 (simctl launch ... -openAppSettings)
+            if ProcessInfo.processInfo.arguments.contains("-openAppSettings") {
+                showAppSettings = true
             }
             // 개발용: 샘플 타이머 채우기 (simctl launch ... -seedTimers)
             if ProcessInfo.processInfo.arguments.contains("-seedTimers"),

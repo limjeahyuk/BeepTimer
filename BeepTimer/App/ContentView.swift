@@ -676,62 +676,7 @@ struct TimerSettingsSheet: View {
                     .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
 
-                // 알림
-                VStack(alignment: .leading, spacing: 8) {
-                    sectionLabel("알림")
-                    HStack(spacing: 12) {
-                        Image(systemName: "bell.badge.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.yellow)
-                            .frame(width: 34, height: 34)
-                            .background(Circle().fill(Color.yellow.opacity(0.15)))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("종료 알림")
-                                .font(.fromCSSFont(16, weight: .medium))
-                                .foregroundStyle(TimerColor.textPrimary)
-                            Text("운동·휴식이 끝날 때 소리와 배너로 알려요")
-                                .font(.system(size: 12))
-                                .foregroundStyle(TimerColor.textSecondary)
-                        }
-
-                        Spacer()
-
-                        Toggle("", isOn: $settings.phaseAlarmEnabled)
-                            .labelsHidden()
-                            .tint(accent)
-                            .onChange(of: settings.phaseAlarmEnabled) { enabled in
-                                if enabled {
-                                    NotificationService.shared.requestAuthorizationIfNeeded()
-                                }
-                            }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 13)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-
-                // 소리 미리듣기 — 타이머가 울릴 때 나는 소리·진동을 바로 들어본다
-                VStack(alignment: .leading, spacing: 8) {
-                    sectionLabel("소리 미리듣기")
-                    VStack(spacing: 0) {
-                        soundPreviewRow(icon: "3.circle.fill", iconColor: .blue,
-                                        label: "카운트다운 (3·2·1)") {
-                            FeedbackService.shared.countdownTick()
-                        }
-                        rowDivider
-                        soundPreviewRow(icon: "bell.fill", iconColor: .orange,
-                                        label: "운동·휴식 종료") {
-                            FeedbackService.shared.phaseEndDouble()
-                        }
-                        rowDivider
-                        soundPreviewRow(icon: "checkmark.circle.fill", iconColor: .green,
-                                        label: "전체 세트 완료") {
-                            FeedbackService.shared.workoutComplete()
-                        }
-                    }
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
+                // 종료 알림·소리 미리듣기는 전체 설정(메인 상단 톱니바퀴)으로 옮겼다
 
                 // 커스텀 영역 (그림 메모 / 사진 슬라이드)
                 VStack(alignment: .leading, spacing: 8) {
@@ -856,10 +801,10 @@ struct TimerSettingsSheet: View {
         .sheet(item: $editingField) { field in
             switch field {
             case .time:
-                TimePickerSheet(initialSeconds: timeSec, minSeconds: 1, maxSeconds: 59*60+59) { timeSec = $0 }
+                TimeInputSheet(initialSeconds: timeSec, minSeconds: 1, maxSeconds: 59*60+59) { timeSec = $0 }
                     .presentationDetents([.medium])
             case .rest:
-                TimePickerSheet(initialSeconds: restSec, minSeconds: 0, maxSeconds: 59*60+59) { restSec = $0 }
+                TimeInputSheet(initialSeconds: restSec, minSeconds: 0, maxSeconds: 59*60+59) { restSec = $0 }
                     .presentationDetents([.medium])
             case .sets:
                 SetsPickerSheet(title: "세트", initial: sets, minSets: 1, maxSets: 99, allowInfinite: true) { sets = $0 }
@@ -1055,34 +1000,6 @@ struct TimerSettingsSheet: View {
             .fill(Color.white.opacity(0.07))
             .frame(height: 1)
             .padding(.leading, 62)
-    }
-
-    /// 소리 미리듣기 행 — 행 전체를 누르면 해당 소리·진동이 재생된다
-    private func soundPreviewRow(icon: String, iconColor: Color, label: String,
-                                 play: @escaping () -> Void) -> some View {
-        Button(action: play) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(iconColor)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(iconColor.opacity(0.15)))
-
-                Text(label)
-                    .font(.fromCSSFont(16, weight: .medium))
-                    .foregroundStyle(TimerColor.textPrimary)
-
-                Spacer()
-
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(TimerColor.textSecondary.opacity(0.8))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     /// 링 색 선택 행 — 행 전체를 누르면 색상 선택기가 열린다
