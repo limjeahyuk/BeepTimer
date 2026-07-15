@@ -11,10 +11,14 @@ import SwiftUI
 /// 워치 화면 고정 팔레트 — 사용자가 바꾸지 못하며 모든 타이머에 통일 적용된다.
 /// 검정 배경 위에서 잘 보이고 서로 잘 어울리는 조합으로 고정한다.
 enum WatchPalette {
-    static let bg    = Color.black                 // 뒷배경 — 검정 고정
-    static let time  = Color(hex: "#22D3EE")       // 운동(타이머 숫자) — 시안
-    static let rest  = Color(hex: "#F59E0B")       // 휴식 — 앰버
-    static let label = Color(hex: "#E5E7EB")       // 단계명(Time/Rest·단계 제목) — 숫자와 구분되는 밝은 회색
+    // 해·달 은유 — 운동은 해(노랑), 휴식은 달(은회색).
+    // 실행 화면에서 해가 지고 달이 뜨는 궤도 연출과 색을 공유한다.
+    static let bg     = Color.black                // 뒷배경 — 검정 고정
+    static let time   = Color(hex: "#FBBF24")      // 운동 = 해 — 노랑
+    static let rest   = Color(hex: "#A1A1AA")      // 휴식 = 달 — 은회색
+    static let label  = Color(hex: "#E5E7EB")      // 단계명(Time/Rest·단계 제목) — 밝은 회색
+    static let number = Color.white                // 남은 시간 숫자 — 흰색 고정.
+                                                   // 궤도(페이즈 색)와 겹쳐도 항상 읽히게 하려는 의도.
 }
 
 extension Color {
