@@ -26,7 +26,7 @@ final class WatchTimerModel: ObservableObject {
     @Published var finished: Bool = false
 
     private var ticker: Timer?
-    private let runtime = WatchRuntimeSession()
+    private let runtime = WatchWorkoutSession.shared
 
     init(config: EngineConfig, autoMode: EngineAutoMode) {
         engine = TimerEngine(config: config, autoMode: autoMode)

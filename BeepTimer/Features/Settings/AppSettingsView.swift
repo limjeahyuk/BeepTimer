@@ -117,6 +117,26 @@ struct AppSettingsView: View {
                         .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
 
+                    // 워치 화면 스타일 — 해와 달 연출 / 심플
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionLabel("워치 화면")
+                        VStack(alignment: .leading, spacing: 10) {
+                            Picker("워치 화면", selection: $settings.watchScreenStyle) {
+                                ForEach(WatchScreenStyle.allCases) { style in
+                                    Text(style.label).tag(style)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
+                            Text("해와 달은 운동이 지고 휴식이 뜨는 연출, 심플은 연출 없이 숫자만 보여줘요")
+                                .font(.system(size: 12))
+                                .foregroundStyle(TimerColor.textSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+
                     Spacer(minLength: 24)
                 }
                 .padding(.horizontal, 20)

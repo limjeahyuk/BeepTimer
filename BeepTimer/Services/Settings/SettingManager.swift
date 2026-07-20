@@ -38,6 +38,7 @@ enum TimerSettingKey {
     static let vibration = "App_Vibration_Enabled"
     static let theme = "App_Theme"
     static let timeInput = "App_Time_Input_Style"
+    static let watchScreen = "Watch_Screen_Style"
 }
 
 class SettingManager: ObservableObject {
@@ -84,6 +85,14 @@ class SettingManager: ObservableObject {
         }
     }
 
+    /// 워치 실행 화면 스타일 (해와 달 / 심플) — 바뀌면 워치로 즉시 다시 보낸다
+    @Published var watchScreenStyle: WatchScreenStyle {
+        didSet {
+            UserDefaults.standard.set(watchScreenStyle.rawValue, forKey: TimerSettingKey.watchScreen)
+            PhoneConnectivity.shared.resyncFromRealm(autoModeRaw: autoMode.rawValue)
+        }
+    }
+
     private init() {
         let defaults = UserDefaults.standard
         if defaults.object(forKey: TimerSettingKey.autoMode) == nil {
@@ -110,5 +119,7 @@ class SettingManager: ObservableObject {
 
         theme = AppTheme(rawValue: defaults.integer(forKey: TimerSettingKey.theme)) ?? .dark
         timeInputStyle = TimeInputStyle(rawValue: defaults.integer(forKey: TimerSettingKey.timeInput)) ?? .keypad
+        // 저장값이 없으면 0 → 기본은 해와 달
+        watchScreenStyle = WatchScreenStyle(rawValue: defaults.integer(forKey: TimerSettingKey.watchScreen)) ?? .sunMoon
     }
 }

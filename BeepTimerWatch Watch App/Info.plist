@@ -4,5 +4,14 @@
 <dict>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- 운동 세션으로 타이머가 백그라운드에서도 이어지게 한다 -->
+	<key>WKBackgroundModes</key>
+	<array>
+		<string>workout-processing</string>
+	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>타이머를 실행하는 동안 운동 세션을 유지해, 손목을 내려도 남은 시간과 진동 알림이 이어지도록 합니다.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>타이머로 진행한 운동을 건강 앱에 기록으로 저장합니다.</string>
 </dict>
 </plist>

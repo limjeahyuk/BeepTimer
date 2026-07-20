@@ -49,7 +49,8 @@ final class PhoneConnectivity: NSObject, WCSessionDelegate {
     func sync(programs: [RTimerProgram], autoModeRaw: Int) {
         let timers = programs.map { Self.syncTimer(from: $0) }
         let payload = SyncPayload(timers: timers, autoModeRaw: autoModeRaw,
-                                  updatedAt: Date())
+                                  updatedAt: Date(),
+                                  screenStyleRaw: SettingManager.shared.watchScreenStyle.rawValue)
         latest = payload
         push(payload)
     }

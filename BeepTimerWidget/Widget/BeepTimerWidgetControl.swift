@@ -9,6 +9,10 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
+// 제어 센터 위젯(Control Widget)은 iOS 18부터 지원된다.
+// 위젯 확장 전체를 iOS 18로 올리지 않도록 이 파일만 18.0 전용으로 표시한다.
+// (현재 BeepTimerWidgetBundle에서 주석 처리되어 실제로 등록되지는 않는다)
+@available(iOS 18.0, *)
 struct BeepTimerWidgetControl: ControlWidget {
     static let kind: String = "com.LimJH.BeepTimer.BeepTimerWidget"
 
@@ -30,6 +34,7 @@ struct BeepTimerWidgetControl: ControlWidget {
     }
 }
 
+@available(iOS 18.0, *)
 extension BeepTimerWidgetControl {
     struct Value {
         var isRunning: Bool
@@ -48,6 +53,7 @@ extension BeepTimerWidgetControl {
     }
 }
 
+@available(iOS 18.0, *)
 struct TimerConfiguration: ControlConfigurationIntent {
     static let title: LocalizedStringResource = "Timer Name Configuration"
 
@@ -55,6 +61,7 @@ struct TimerConfiguration: ControlConfigurationIntent {
     var timerName: String
 }
 
+@available(iOS 18.0, *)
 struct StartTimerIntent: SetValueIntent {
     static let title: LocalizedStringResource = "Start a timer"
 

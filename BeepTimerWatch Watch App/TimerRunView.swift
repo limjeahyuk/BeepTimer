@@ -30,6 +30,8 @@ struct TimerRunView: View {
     private var phaseColor: Color { model.isRest ? restColor : timeColor }
     /// 다음 페이즈의 몸체 색 — 운동 중엔 달(휴식), 휴식 중엔 해(운동)
     private var nextBodyColor: Color { model.isRest ? timeColor : restColor }
+    /// 아이폰 전체 설정에서 고른 화면 스타일 — 해와 달 연출을 켤지 여부
+    private var isSunMoon: Bool { sync.screenStyle == .sunMoon }
 
     var body: some View {
         GeometryReader { geo in
@@ -40,6 +42,10 @@ struct TimerRunView: View {
             let sunkDrop = side * 1.25      // 지평선 아래로 완전히 사라지는 오프셋
             let skyDrop = -side * 1.25      // 화면 위 하늘 바깥 — 다음 몸체의 시작 위치
             let elapsed = 1 - model.progress // 경과 비율 (0 → 1)
+            // 심플 스타일에서는 원반이 없으므로 halo·오프셋도 끈다
+            let halo = isSunMoon ? side * 0.02 : 0
+            let smallHalo = isSunMoon ? side * 0.015 : 0
+            let contentDrop = isSunMoon ? -side * 0.05 : 0
 
             ZStack {
                 bgColor
@@ -48,22 +54,25 @@ struct TimerRunView: View {
                 // 진행에 따라 지평선(화면 아래) 밑으로 지고, 다음 페이즈의 몸체가 하늘에서
                 // 내려와 페이즈가 끝나는 순간 돔 자리에 안착한다. 페이즈가 바뀌면 방금 안착한
                 // 몸체가 "현재"가 되어 그 자리에서 다시 지기 시작한다.
-                Group {
-                    // 지는 몸체 — 현재 페이즈. 꽉 찬 원반이라 실제 해/달처럼 보인다.
-                    Circle()
-                        .fill(phaseColor)
-                        .offset(y: arcDrop + (sunkDrop - arcDrop) * elapsed)
+                // (심플 스타일에서는 연출 없이 숫자만 보여준다)
+                if isSunMoon {
+                    Group {
+                        // 지는 몸체 — 현재 페이즈. 꽉 찬 원반이라 실제 해/달처럼 보인다.
+                        Circle()
+                            .fill(phaseColor)
+                            .offset(y: arcDrop + (sunkDrop - arcDrop) * elapsed)
 
-                    // 내려오는 몸체 — 다음 페이즈 (도착하는 쪽이 앞에 그려진다)
-                    Circle()
-                        .fill(nextBodyColor)
-                        .offset(y: skyDrop + (arcDrop - skyDrop) * elapsed)
+                        // 내려오는 몸체 — 다음 페이즈 (도착하는 쪽이 앞에 그려진다)
+                        Circle()
+                            .fill(nextBodyColor)
+                            .offset(y: skyDrop + (arcDrop - skyDrop) * elapsed)
+                    }
+                    .frame(width: arcDiameter, height: arcDiameter)
+                    .animation(.linear(duration: 0.1), value: model.progress)
+                    // 페이즈가 바뀌면 뷰를 새로 만들어, 역할이 뒤바뀐 원반이 화면을 가로질러
+                    // 날아가는(푸슉) 전환 애니메이션을 차단한다.
+                    .id("\(model.setIndex)-\(model.isRest)-\(model.phaseLabel)")
                 }
-                .frame(width: arcDiameter, height: arcDiameter)
-                .animation(.linear(duration: 0.1), value: model.progress)
-                // 페이즈가 바뀌면 뷰를 새로 만들어, 역할이 뒤바뀐 원반이 화면을 가로질러
-                // 날아가는(푸슉) 전환 애니메이션을 차단한다.
-                .id("\(model.setIndex)-\(model.isRest)-\(model.phaseLabel)")
 
                 VStack(spacing: side * 0.02) {
                     // 단계 이름을 항상 표시 — 커스텀은 단계 제목, 단순 타이머는 Time/Rest.
@@ -71,21 +80,21 @@ struct TimerRunView: View {
                     Text(model.phaseLabel)
                         .font(.system(size: side * 0.12, weight: .bold))
                         .foregroundStyle(WatchPalette.label)   // 숫자와 다른 색으로 구분
-                        .shadow(color: bgColor, radius: side * 0.015)  // 원반이 지나가도 읽히게 —
-                        .shadow(color: bgColor, radius: side * 0.015)  // 겹층 halo로 윤곽선 효과
+                        .shadow(color: bgColor, radius: smallHalo)  // 원반이 지나가도 읽히게 —
+                        .shadow(color: bgColor, radius: smallHalo)  // 겹층 halo로 윤곽선 효과
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
 
-                    // 남은 시간 — 흰색 고정. 밝은 원반(해/달)이 뒤를 지나가도 항상 읽히게
-                    // 검정 halo를 세 겹 쌓아 윤곽선처럼 숫자를 분리한다.
-                    // (운동/휴식 구분은 원반·아래 스탯의 색이 담당한다.)
+                    // 남은 시간 — 해와 달 스타일에서는 흰색 고정에 검정 halo 세 겹을 쌓아
+                    // 밝은 원반이 뒤를 지나가도 항상 읽히게 한다. (구분은 원반·스탯 색이 담당)
+                    // 심플 스타일에서는 원반이 없으므로 페이즈 색을 그대로 숫자에 쓴다.
                     Text(timeString(model.remaining))
                         .font(.system(size: side * 0.4, weight: .bold, design: .rounded))
                         .monospacedDigit()
-                        .foregroundStyle(WatchPalette.number)
-                        .shadow(color: bgColor, radius: side * 0.02)
-                        .shadow(color: bgColor, radius: side * 0.02)
-                        .shadow(color: bgColor, radius: side * 0.02)
+                        .foregroundStyle(isSunMoon ? WatchPalette.number : phaseColor)
+                        .shadow(color: bgColor, radius: halo)
+                        .shadow(color: bgColor, radius: halo)
+                        .shadow(color: bgColor, radius: halo)
                         .lineLimit(1)
                         .minimumScaleFactor(0.4)
 
@@ -105,13 +114,13 @@ struct TimerRunView: View {
                     }
                     .font(.system(size: side * 0.1, weight: .semibold))
                     .monospacedDigit()
-                    .shadow(color: bgColor, radius: side * 0.015)  // 원반이 지나가도 읽히게 —
-                    .shadow(color: bgColor, radius: side * 0.015)  // 겹층 halo로 윤곽선 효과
+                    .shadow(color: bgColor, radius: smallHalo)  // 원반이 지나가도 읽히게 —
+                    .shadow(color: bgColor, radius: smallHalo)  // 겹층 halo로 윤곽선 효과
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                 }
                 .padding(.horizontal, side * 0.11)
-                .offset(y: -side * 0.05)   // 숫자를 살짝 위로 올려 아래 돔 안에 앉힌다
+                .offset(y: contentDrop)   // 해와 달에서는 숫자를 살짝 위로 올려 돔 안에 앉힌다
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipped()   // 궤도를 도는 원이 화면 밖으로 그려지지 않게

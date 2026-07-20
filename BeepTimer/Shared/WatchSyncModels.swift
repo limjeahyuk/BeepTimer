@@ -42,11 +42,33 @@ struct SyncTimer: Codable, Equatable, Identifiable {
                                     timeSec: 30, restSec: 15, totalSets: 3, steps: [])
 }
 
+/// 워치 실행 화면 스타일 — 아이폰 전체 설정에서 고르며 워치의 모든 타이머에 적용된다.
+enum WatchScreenStyle: Int, Codable, CaseIterable, Identifiable {
+    case sunMoon = 0   // 해와 달 — 운동(해)이 지고 휴식(달)이 뜨는 연출 (기본)
+    case plain   = 1   // 심플 — 연출 없이 숫자만 깔끔하게
+
+    var id: Int { rawValue }
+
+    var label: String {
+        switch self {
+        case .sunMoon: return "해와 달"
+        case .plain:   return "심플"
+        }
+    }
+}
+
 /// 아이폰이 App Context로 보내는 전체 페이로드
 struct SyncPayload: Codable, Equatable {
     var timers: [SyncTimer]
     var autoModeRaw: Int      // AutoPlayMode / EngineAutoMode 공통 raw 값
     var updatedAt: Date
+    /// 워치 화면 스타일 raw — 구버전 페이로드에는 없으므로 옵셔널로 둔다
+    var screenStyleRaw: Int?
+
+    /// 값이 없거나 알 수 없으면 기본(해와 달)
+    var screenStyle: WatchScreenStyle {
+        WatchScreenStyle(rawValue: screenStyleRaw ?? 0) ?? .sunMoon
+    }
 }
 
 extension SyncTimer {
