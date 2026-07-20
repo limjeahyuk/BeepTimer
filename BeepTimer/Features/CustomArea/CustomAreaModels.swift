@@ -19,14 +19,12 @@ final class CustomAreaState: ObservableObject {
 enum CustomAreaMode: String, CaseIterable {
     case drawing    // 그림 메모
     case photos     // 사진 슬라이드
-    case web        // 웹 페이지 (기본 Google, 설정에서 시작 URL 변경)
     case sudoku     // 스도쿠 미니 게임
 
     var label: String {
         switch self {
         case .drawing: return "그림 메모"
         case .photos:  return "사진"
-        case .web:     return "웹"
         case .sudoku:  return "스도쿠"
         }
     }
@@ -36,7 +34,6 @@ enum CustomAreaMode: String, CaseIterable {
         switch self {
         case .drawing: return "scribble.variable"
         case .photos:  return "photo.on.rectangle"
-        case .web:     return "globe"
         case .sudoku:  return "square.grid.3x3"
         }
     }

@@ -14,7 +14,6 @@ class RCustomArea: Object {
     @Persisted(primaryKey: true) var key: String
     @Persisted var modeRaw: String = CustomAreaMode.drawing.rawValue
     @Persisted var photoFiles: List<String>
-    @Persisted var webUrl: String = ""    // 웹 모드 시작 URL (빈 문자열 = Google)
     @Persisted var sudokuState: String = ""  // 스도쿠 진행 상태 (JSON, 빈 문자열 = 새 게임)
     @Persisted var updatedAt: Date = Date()
 }
@@ -42,19 +41,6 @@ enum PhotoSlideStore {
 
     static func saveMode(key: String, mode: CustomAreaMode) {
         update(key: key) { $0.modeRaw = mode.rawValue }
-    }
-
-    // MARK: - 웹 시작 URL
-
-    static func loadWebUrl(key: String) -> String {
-        guard let realm = try? Realm(),
-              let obj = realm.object(ofType: RCustomArea.self, forPrimaryKey: key)
-        else { return "" }
-        return obj.webUrl
-    }
-
-    static func saveWebUrl(key: String, url: String) {
-        update(key: key) { $0.webUrl = url }
     }
 
     // MARK: - 스도쿠 상태 (JSON 문자열)

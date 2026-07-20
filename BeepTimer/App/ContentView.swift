@@ -302,8 +302,6 @@ struct ContentView: View {
         .simultaneousGesture(
             DragGesture(minimumDistance: 30)
                 .onEnded { value in
-                    // 웹 영역이 열려 있으면 웹뷰 세로 스크롤과 겹쳐 설정 시트가 잘못 열린다 → 무시
-                    if showMemoArea && areaMode == .web { return }
                     if value.translation.height < -50,
                        abs(value.translation.height) > abs(value.translation.width) {
                         showSettings = true
@@ -339,7 +337,6 @@ struct ContentView: View {
             switch mode {
             case .drawing: memoStrokes = DrawingMemoStore.load(key: memoKey)
             case .photos:  slidePhotos = PhotoSlideStore.loadPhotos(key: memoKey)
-            case .web:     break   // 웹뷰는 열릴 때 저장된 URL을 스스로 불러온다
             case .sudoku:  break   // 스도쿠는 열릴 때 저장된 진행 상태를 스스로 불러온다
             }
         }
@@ -390,10 +387,6 @@ struct ContentView: View {
             if ProcessInfo.processInfo.arguments.contains("-drawMode") {
                 PhotoSlideStore.saveMode(key: memoKey, mode: .drawing)
                 areaMode = .drawing
-            }
-            if ProcessInfo.processInfo.arguments.contains("-webMode") {
-                PhotoSlideStore.saveMode(key: memoKey, mode: .web)
-                areaMode = .web
             }
             // 개발용: 샘플 사진 채우기 (simctl launch ... -seedPhotos)
             if ProcessInfo.processInfo.arguments.contains("-seedPhotos"),
@@ -468,10 +461,6 @@ struct ContentView: View {
                         }
                 case .photos:
                     PhotoSlideView(memoKey: memoKey, photos: slidePhotos, photoStamp: $photoStamp)
-                case .web:
-                    CustomAreaWebView(
-                        initialURL: CustomAreaWebView.makeURL(from: PhotoSlideStore.loadWebUrl(key: memoKey))
-                    )
                 case .sudoku:
                     SudokuView(memoKey: memoKey)
                 }
@@ -499,8 +488,6 @@ struct ContentView: View {
                 memoPenHex = DrawingMemoStore.loadPenColor(key: memoKey)
             case .photos:
                 slidePhotos = PhotoSlideStore.loadPhotos(key: memoKey)
-            case .web:
-                break   // 웹뷰는 열릴 때 저장된 URL을 스스로 불러온다
             case .sudoku:
                 break   // 스도쿠는 열릴 때 저장된 진행 상태를 스스로 불러온다
             }
@@ -554,7 +541,6 @@ struct TimerSettingsSheet: View {
     @State private var editingField: EditingField?
     @State private var showStepEditor = false
     @State private var bgPickerItem: PhotosPickerItem?
-    @State private var webUrlText = ""   // 웹 모드 시작 URL (빈 문자열 = Google)
     @State private var timeColor: Color = TimerColor.ringTime   // 운동 링 색
     @State private var restColor: Color = TimerColor.ringRest   // 휴식 링 색
     @State private var colorTarget: ColorTarget?                // 색상 선택기를 띄운 대상
@@ -728,32 +714,6 @@ struct TimerSettingsSheet: View {
                             memoPreview
                         case .photos:
                             PhotoManageGrid(memoKey: memoKey, photoStamp: $photoStamp)
-                        case .web:
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("시작 페이지")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(TimerColor.textSecondary)
-                                HStack(spacing: 8) {
-                                    Image(systemName: "globe")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(TimerColor.textSecondary)
-                                    TextField("https://www.google.com", text: $webUrlText)
-                                        .textFieldStyle(.plain)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundStyle(TimerColor.textPrimary)
-                                        .keyboardType(.URL)
-                                        .textInputAutocapitalization(.never)
-                                        .autocorrectionDisabled()
-                                        .submitLabel(.done)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 10)
-                                .background(Color.white.opacity(0.06),
-                                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                Text("비워두면 Google이 열려요")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(TimerColor.textSecondary)
-                            }
                         case .sudoku:
                             HStack(spacing: 8) {
                                 Image(systemName: "square.grid.3x3")
@@ -827,7 +787,6 @@ struct TimerSettingsSheet: View {
             sets = max(1, controller.totalSets)
             timeColor = Color(hex: controller.timeColorHex.isEmpty ? TimerColor.defaultTimeHex : controller.timeColorHex)
             restColor = Color(hex: controller.restColorHex.isEmpty ? TimerColor.defaultRestHex : controller.restColorHex)
-            webUrlText = PhotoSlideStore.loadWebUrl(key: memoKey)
         }
         // 색을 고르는 즉시 링에 반영 (컨트롤러 갱신 → 원형/아일랜드/워치는 닫을 때 저장)
         .onChange(of: timeColor) { newVal in
@@ -835,9 +794,6 @@ struct TimerSettingsSheet: View {
         }
         .onChange(of: restColor) { newVal in
             controller.updateColors(timeColorHex: timeColor.toHex(), restColorHex: newVal.toHex())
-        }
-        .onChange(of: webUrlText) { url in
-            PhotoSlideStore.saveWebUrl(key: memoKey, url: url)
         }
         // 배경 사진 선택 → 축소 저장 후 즉시 반영
         .onChange(of: bgPickerItem) { item in
