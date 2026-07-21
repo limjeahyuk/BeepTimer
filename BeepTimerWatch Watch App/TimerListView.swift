@@ -11,6 +11,12 @@ import SwiftUI
 struct TimerListView: View {
     @ObservedObject private var sync = WatchConnectivityManager.shared
 
+    #if DEBUG
+    /// 스토어 스크린샷용: 첫 타이머 실행 화면으로 바로 들어간다
+    /// (simctl launch ... -openRun)
+    @State private var autoOpenRun = ProcessInfo.processInfo.arguments.contains("-openRun")
+    #endif
+
     /// 동기화된 타이머가 없으면 기본 타이머 하나만 보여준다
     private var timers: [SyncTimer] {
         sync.timers.isEmpty ? [.fallback] : sync.timers
@@ -61,5 +67,11 @@ struct TimerListView: View {
         .background(WatchPalette.bg.ignoresSafeArea())
         .navigationTitle("Beep Timer")
         .onAppear { sync.requestTimers() }
+        #if DEBUG
+        // 스토어 스크린샷용 자동 진입 — 목록이 동기화된 뒤 첫 타이머를 연다
+        .navigationDestination(isPresented: $autoOpenRun) {
+            TimerRunView(timer: timers[0], autoMode: sync.autoMode)
+        }
+        #endif
     }
 }
