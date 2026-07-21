@@ -269,6 +269,12 @@ struct TimerPager: View {
                     }
                 }
             }
+            // 스토어 스크린샷용: 타이머를 자동으로 시작해 실행 중 화면을 만든다
+            // (simctl launch ... -autoStart)
+            if ProcessInfo.processInfo.arguments.contains("-autoStart") {
+                SettingManager.shared.phaseAlarmEnabled = false   // 권한 팝업 방지
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { currentController.start() }
+            }
             // 개발용: 시작→일시정지→재개 흐름 자동 실행 (simctl launch ... -demoResumeFlow)
             // 잠금화면 Live Activity 카운트다운 검증에 사용
             if ProcessInfo.processInfo.arguments.contains("-demoResumeFlow") {
