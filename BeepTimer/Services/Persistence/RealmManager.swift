@@ -65,8 +65,9 @@ struct ProgramStore {
     
     static func open() throws -> ProgramStore {
         let config = Realm.Configuration(
-            schemaVersion: 11) { _, _ in
+            schemaVersion: 12) { _, _ in
                 // v11: 링 색상 필드 추가 (기본값 지정 → 별도 마이그레이션 불필요)
+                // v12: 웹 영역 제거로 RCustomArea.webUrl 삭제 (Realm이 알아서 정리)
                 // (기본 설정과 버전을 반드시 일치시킨다 — BeepTimerApp.swift 참고)
                 logger.d("migration nothing")
             }

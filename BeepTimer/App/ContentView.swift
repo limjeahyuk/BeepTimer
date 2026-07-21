@@ -350,6 +350,11 @@ struct ContentView: View {
             memoBgPhoto = DrawingMemoStore.loadBackgroundPhoto(key: memoKey)
             memoPenHex = DrawingMemoStore.loadPenColor(key: memoKey)
             #if DEBUG
+            // 스토어 스크린샷용: 기존 타이머를 모두 지우고 샘플 세트로 교체
+            // (simctl launch ... -seedStoreTimers)
+            if ProcessInfo.processInfo.arguments.contains("-seedStoreTimers") {
+                seedStoreTimers()
+            }
             // 개발용: 샘플 그림 저장 (simctl launch ... -seedDrawing)
             if ProcessInfo.processInfo.arguments.contains("-seedDrawing") {
                 let wave = stride(from: 0.0, through: 240.0, by: 8.0).map {
@@ -473,6 +478,61 @@ struct ContentView: View {
             .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
         }
     }
+
+    #if DEBUG
+    /// 스토어 스크린샷용 샘플 타이머 시딩.
+    /// 기존 프로그램을 전부 지우고 아래 세트로 교체한다 — 테스트 중 쌓인 "2222222" 같은
+    /// 이름이 스크린샷에 찍히지 않게 하려는 것이므로 파괴적으로 동작하는 게 맞다.
+    /// DEBUG 빌드에서 실행 인자를 줬을 때만 돈다.
+    private func seedStoreTimers() {
+        guard let store = try? ProgramStore.open() else { return }
+
+        // 기존 전부 삭제
+        let existing = Array(store.all())
+        existing.forEach { try? store.delete($0) }
+
+        // 단순 반복 타이머 — time/rest 쌍을 세트 수만큼 반복
+        func simple(_ title: String, time: Int, rest: Int, sets: Int,
+                    timeHex: String, restHex: String) -> TimerModel {
+            var steps: [TimerModel.Step] = []
+            for _ in 0..<sets {
+                steps.append(.init(kind: .time, seconds: time))
+                steps.append(.init(kind: .rest, seconds: rest))
+            }
+            return TimerModel(title: title, infiniteSets: false,
+                              timeColorHex: timeHex, restColorHex: restHex, steps: steps)
+        }
+
+        // 상세(커스텀) 타이머 — 단계마다 이름이 붙는다
+        let fullBody = TimerModel(
+            title: "전신 서킷",
+            infiniteSets: false,
+            timeColorHex: "#22D3EE", restColorHex: "#F59E0B",
+            steps: [
+                .init(kind: .time, seconds: 40, title: "버피"),
+                .init(kind: .rest, seconds: 20, title: "휴식"),
+                .init(kind: .time, seconds: 40, title: "마운틴 클라이머"),
+                .init(kind: .rest, seconds: 20, title: "휴식"),
+                .init(kind: .time, seconds: 40, title: "점핑잭"),
+                .init(kind: .rest, seconds: 20, title: "휴식"),
+                .init(kind: .time, seconds: 40, title: "플랭크"),
+                .init(kind: .rest, seconds: 30, title: "휴식")
+            ])
+
+        // insert 순서대로 createdAt이 쌓이고 목록은 최신순 정렬이므로,
+        // 첫 페이지에 두고 싶은 타이머를 마지막에 넣는다.
+        let samples: [TimerModel] = [
+            simple("코어 플랭크", time: 60, rest: 30, sets: 3,
+                   timeHex: "#A78BFA", restHex: "#F59E0B"),
+            simple("스쿼트 30회", time: 45, rest: 15, sets: 4,
+                   timeHex: "#34D399", restHex: "#F59E0B"),
+            fullBody,
+            simple("타바타", time: 20, rest: 10, sets: 8,
+                   timeHex: "#22D3EE", restHex: "#F59E0B")
+        ]
+        samples.forEach { try? store.insert($0) }
+    }
+    #endif
 
     private func toggleMemoArea() {
         if showMemoArea {
