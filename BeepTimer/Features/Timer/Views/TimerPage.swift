@@ -177,12 +177,6 @@ struct TimerPager: View {
 
                     Spacer()
 
-                    PageDots(count: programs.count,
-                             current: page,
-                             alert: rangIndices)
-
-                    Spacer()
-
                     Button {
                         addTimer()
                     } label: {
@@ -193,6 +187,14 @@ struct TimerPager: View {
                             .contentShape(Rectangle())
                     }
                     .accessibilityLabel("새 타이머 추가")
+                }
+                // 페이지 인디케이터는 좌우 버튼 수와 무관하게 화면 정중앙에 고정한다
+                // (Spacer 사이에 두면 좌측 버튼 2개 / 우측 1개라 오른쪽으로 밀린다)
+                .overlay {
+                    PageDots(count: programs.count,
+                             current: page,
+                             alert: rangIndices)
+                        .allowsHitTesting(false)
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 4)
