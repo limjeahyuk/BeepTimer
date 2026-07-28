@@ -7,7 +7,7 @@
 | 항목 | 상태 |
 |---|---|
 | 개인정보 매니페스트 (`PrivacyInfo.xcprivacy`) | 앱·위젯 both. UserDefaults / 사유 `CA92.1` |
-| 배포 타깃 | 앱·위젯 모두 iOS 17.6 (워치 10.0) |
+| 배포 타깃 | 앱·위젯 모두 iOS 17.0 (워치 10.0) — watchOS 10은 iOS 17과 짝이므로 맞춤 |
 | Development Team | 전 타깃 `8WW9CMZ6D2` |
 | 워치 앱 표시 이름 | `BeepTimer` |
 | 워치 백그라운드 | HealthKit `HKWorkoutSession` + `WKBackgroundModes: workout-processing` |
