@@ -151,29 +151,28 @@ struct TimerPager: View {
             // 상단 바: 리스트 / 페이지 인디케이터 / +
             VStack(spacing: 6) {
                 HStack {
-                    Button {
-                        hideKeyboard()
-                        showLibrary = true
+                    // 햄버거 메뉴 — 타이머 관리 / 전체 설정을 이 아래에 모은다
+                    Menu {
+                        Button {
+                            hideKeyboard()
+                            showLibrary = true
+                        } label: {
+                            Label("타이머 관리", systemImage: "list.bullet")
+                        }
+                        Button {
+                            hideKeyboard()
+                            showAppSettings = true
+                        } label: {
+                            Label("전체 설정", systemImage: "gearshape")
+                        }
                     } label: {
-                        Image(systemName: "list.bullet")
-                            .font(.system(size: 17, weight: .semibold))
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.85))
                             .frame(width: 40, height: 40)
                             .contentShape(Rectangle())
                     }
-                    .accessibilityLabel("타이머 관리")
-
-                    Button {
-                        hideKeyboard()
-                        showAppSettings = true
-                    } label: {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .frame(width: 40, height: 40)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("전체 설정")
+                    .accessibilityLabel("메뉴")
 
                     Spacer()
 
