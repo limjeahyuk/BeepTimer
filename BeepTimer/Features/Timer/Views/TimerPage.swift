@@ -151,28 +151,17 @@ struct TimerPager: View {
             // 상단 바: 리스트 / 페이지 인디케이터 / +
             VStack(spacing: 6) {
                 HStack {
-                    // 햄버거 메뉴 — 타이머 관리 / 전체 설정을 이 아래에 모은다
-                    Menu {
-                        Button {
-                            hideKeyboard()
-                            showLibrary = true
-                        } label: {
-                            Label("타이머 관리", systemImage: "list.bullet")
-                        }
-                        Button {
-                            hideKeyboard()
-                            showAppSettings = true
-                        } label: {
-                            Label("전체 설정", systemImage: "gearshape")
-                        }
+                    Button {
+                        hideKeyboard()
+                        showLibrary = true
                     } label: {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 18, weight: .semibold))
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.85))
                             .frame(width: 40, height: 40)
                             .contentShape(Rectangle())
                     }
-                    .accessibilityLabel("메뉴")
+                    .accessibilityLabel("타이머 관리")
 
                     Spacer()
 
@@ -188,7 +177,6 @@ struct TimerPager: View {
                     .accessibilityLabel("새 타이머 추가")
                 }
                 // 페이지 인디케이터는 좌우 버튼 수와 무관하게 화면 정중앙에 고정한다
-                // (Spacer 사이에 두면 좌측 버튼 2개 / 우측 1개라 오른쪽으로 밀린다)
                 .overlay {
                     PageDots(count: programs.count,
                              current: page,
@@ -197,6 +185,24 @@ struct TimerPager: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.top, 4)
+
+                // 전체 설정 — 리스트 버튼 바로 아래에 둔다
+                HStack {
+                    Button {
+                        hideKeyboard()
+                        showAppSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .frame(width: 40, height: 40)
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("전체 설정")
+
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
 
                 // 다른 페이지의 타이머가 울렸을 때 알림
                 if let rangTitle = store.lastRangTitle {
