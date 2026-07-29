@@ -166,10 +166,10 @@ BeepTimer는 운동과 휴식을 반복하는 인터벌 트레이닝을 위한 �
 2026 임재혁
 ```
 
-**URL** (아래 5-1 지원 사이트 배포 후 채운다)
+**URL** (Netlify 배포 완료 — 세 경로 모두 정상 확인됨)
 
-- 지원 URL: `https://<netlify-주소>`
-- 개인정보 처리방침 URL: `https://<netlify-주소>/privacy-policy`
+- 지원 URL: `https://musical-muffin-8c2599.netlify.app`
+- 개인정보 처리방침 URL: `https://musical-muffin-8c2599.netlify.app/privacy-policy`
 - 마케팅 URL: 비워둠 (선택)
 
 ## 4-1. 지원 사이트 (Netlify)
